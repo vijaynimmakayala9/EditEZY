@@ -23,7 +23,7 @@ const SinglePoster = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://194.164.148.244:4061/api/poster/singlecanvasposters/${posterId}`
+          `https://api.editezy.com/api/poster/singlecanvasposters/${posterId}`
         );
         setPoster(response.data.poster || null);
         setLoading(false);

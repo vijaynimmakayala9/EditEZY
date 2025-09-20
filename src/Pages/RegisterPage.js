@@ -38,12 +38,12 @@ const RegisterPage = () => {
 
     try {
       const response = await axios.post(
-        "http://194.164.148.244:4061/api/users/register",
+        "https://api.editezy.com/api/users/register",
         { name, email, mobile, dob, marriageAnniversaryDate, referralCode }
       );
 
       if (response.status === 201) {
-        navigate("/login");
+        navigate("/");
       }
     } catch (error) {
       setError(error.response?.data?.message || "Registration failed.");

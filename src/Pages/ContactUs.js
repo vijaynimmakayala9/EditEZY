@@ -41,7 +41,7 @@ const ContactUs = () => {
 
     try {
       const response = await axios.post(
-        `http://194.164.148.244:4061/api/users/contact-us/${userId}`,
+        `https://api.editezy.com/api/users/contact-us/${userId}`,
         formData
       );
       if (response.status === 200) {

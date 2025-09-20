@@ -14,13 +14,13 @@ const ProfileHeader = () => {
     if (userId) {
       // fetch profile
       axios
-        .get(`http://194.164.148.244:4061/api/users/get-profile/${userId}`)
+        .get(`https://api.editezy.com/api/users/get-profile/${userId}`)
         .then((res) => setProfile(res.data))
         .catch((err) => console.error("Profile fetch error", err));
 
       // fetch wishes
       axios
-        .get(`http://194.164.148.244:4061/api/users/wishes/${userId}`)
+        .get(`https://api.editezy.com/api/users/wishes/${userId}`)
         .then((res) => setWishes(res.data.wishes || []))
         .catch((err) => console.error("Wishes fetch error", err));
     }

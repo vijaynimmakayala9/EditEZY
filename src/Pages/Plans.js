@@ -7,25 +7,38 @@ const Plans = () => {
   const [plans, setPlans] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const response = await axios.get(
-          "http://194.164.148.244:4061/api/plans/getallplan"
-        );
-        if (response.data && response.data.plans) {
-          setPlans(response.data.plans);
-          setIsModalOpen(true);
-        }
-      } catch (error) {
-        console.error("Error fetching plans", error);
-      }
-    };
+  const navigate = useNavigate();
 
-    fetchPlans();
+  // ✅ Check if user has a valid plan
+  const hasValidPlan = () => {
+    const subscribedPlans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
+    if (subscribedPlans.length === 0) return false;
+
+    const currentDate = new Date();
+    return subscribedPlans.some((plan) => new Date(plan.endDate) > currentDate);
+  };
+
+  useEffect(() => {
+    // Only fetch and show plans if user doesn't have a valid plan
+    if (!hasValidPlan()) {
+      const fetchPlans = async () => {
+        try {
+          const response = await axios.get(
+            "https://api.editezy.com/api/plans/getallplan"
+          );
+          if (response.data && response.data.plans) {
+            setPlans(response.data.plans);
+            setIsModalOpen(true);
+          }
+        } catch (error) {
+          console.error("Error fetching plans", error);
+        }
+      };
+
+      fetchPlans();
+    }
   }, []);
 
-  const navigate = useNavigate();
   const handlePlanClick = (planId) => {
     navigate(`/singleplan/${planId}`);
   };

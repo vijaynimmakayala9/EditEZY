@@ -53,7 +53,7 @@ const SinglePlan = () => {
     const fetchPlan = async () => {
       try {
         console.log(id)
-        const response = await axios.get(`http://194.164.148.244:4061/api/plans/singleplan/${id}`);
+        const response = await axios.get(`https://api.editezy.com/api/plans/singleplan/${id}`);
         if (response.data && response.data.plan) {
           setPlan(response.data.plan);
         }
@@ -100,7 +100,7 @@ const SinglePlan = () => {
           try {
             setResponseMessage("Verifying payment...");
 
-            const verificationResponse = await axios.post("http://194.164.148.244:4061/api/payment/payWithRazorpay", {
+            const verificationResponse = await axios.post("https://api.editezy.com/api/payment/payWithRazorpay", {
               userId: user._id,
               planId: plan._id,
               transactionId: response.razorpay_payment_id

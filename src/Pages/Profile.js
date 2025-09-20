@@ -17,7 +17,7 @@ const Profile = () => {
 
   const fetchProfile = (id) => {
     axios
-      .get(`http://194.164.148.244:4061/api/users/get-profile/${id}`)
+      .get(`https://api.editezy.com/api/users/get-profile/${id}`)
       .then((res) => setProfile(res.data))
       .catch((err) => console.error(err));
   };
@@ -41,7 +41,7 @@ const Profile = () => {
     try {
       setLoading(true);
       await axios.put(
-        `http://194.164.148.244:4061/api/users/edit-profile/${userId}`,
+        `https://api.editezy.com/api/users/edit-profile/${userId}`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

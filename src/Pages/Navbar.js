@@ -113,7 +113,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top Navbar */}
-      <header className="bg-white py-3 sticky top-0 z-50 shadow-md">
+      <header className="bg-white py-2 sticky top-0 z-50 shadow-md">
         <div className="container mx-auto flex justify-between items-center px-4 sm:px-6 h-16">
           {/* Logo */}
           <div className="flex items-center gap-2">
@@ -218,18 +218,18 @@ const Navbar = () => {
 
       {/* Bottom Navigation (Mobile only) */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-inner border-t z-50">
-        <div className="flex justify-around items-center py-2 h-20">
+        <div className="flex justify-around items-center py-2 h-16">
           {/* Home */}
           <button
             onClick={() => navigate("/home")}
-            className={`flex flex-col items-center text-xs ${activeRoute === 'home' ? 'text-blue-600 font-semibold' : 'text-gray-700'
+            className={`flex flex-col items-center text-[10px] ${activeRoute === 'home' ? 'text-blue-600 font-semibold' : 'text-gray-700'
               }`}
           >
             <IconWrapper
               color={activeRoute === 'home' ? "bg-blue-50" : "bg-gray-50"}
               isActive={activeRoute === 'home'}
             >
-              <IoHomeOutline className="text-blue-500 lg:text-lg md:text-xl sm:text-lg" />
+              <IoHomeOutline className="text-blue-500 lg:text-lg md:text-xl sm:text-xl" />
             </IconWrapper>
             Home
           </button>
@@ -237,14 +237,14 @@ const Navbar = () => {
           {/* Category */}
           <button
             onClick={() => navigate("/categories")}
-            className={`flex flex-col items-center text-xs ${activeRoute === 'categories' ? 'text-purple-600 font-semibold' : 'text-gray-700'
+            className={`flex flex-col items-center text-[10px] ${activeRoute === 'categories' ? 'text-purple-600 font-semibold' : 'text-gray-700'
               }`}
           >
             <IconWrapper
               color={activeRoute === 'categories' ? "bg-purple-50" : "bg-gray-50"}
               isActive={activeRoute === 'categories'}
             >
-              <IoAppsOutline className="text-purple-500 lg:text-lg md:text-xl sm:text-lg" />
+              <IoAppsOutline className="text-purple-500 lg:text-lg md:text-xl sm:text-xl" />
             </IconWrapper>
             Category
           </button>
@@ -252,14 +252,14 @@ const Navbar = () => {
           {/* Horoscope */}
           <button
             onClick={() => navigate("/horoscope")}
-            className={`flex flex-col items-center text-xs ${activeRoute === 'horoscope' ? 'text-orange-600 font-semibold' : 'text-gray-700'
+            className={`flex flex-col items-center text-[10px] ${activeRoute === 'horoscope' ? 'text-orange-600 font-semibold' : 'text-gray-700'
               }`}
           >
             <IconWrapper
               color={activeRoute === 'horoscope' ? "bg-orange-50" : "bg-gray-50"}
               isActive={activeRoute === 'horoscope'}
             >
-              <IoSparklesOutline className="text-orange-500 lg:text-lg md:text-xl sm:text-lg" />
+              <IoSparklesOutline className="text-orange-500 lg:text-lg md:text-xl sm:text-xl" />
             </IconWrapper>
             Horoscope
           </button>
@@ -267,14 +267,14 @@ const Navbar = () => {
           {/* Create */}
           <button
             onClick={() => navigate("/create")}
-            className={`flex flex-col items-center text-xs ${activeRoute === 'create' ? 'text-green-600 font-semibold' : 'text-gray-700'
+            className={`flex flex-col items-center text-[10px] ${activeRoute === 'create' ? 'text-green-600 font-semibold' : 'text-gray-700'
               }`}
           >
             <IconWrapper
               color={activeRoute === 'create' ? "bg-green-50" : "bg-gray-50"}
               isActive={activeRoute === 'create'}
             >
-              <IoCreateOutline className="text-green-500 lg:text-lg md:text-xl sm:text-lg" />
+              <IoCreateOutline className="text-green-500 lg:text-lg md:text-xl sm:text-xl" />
             </IconWrapper>
             Create
           </button>
@@ -282,14 +282,14 @@ const Navbar = () => {
           {/* Customers */}
           <button
             onClick={() => navigate("/customer")}
-            className={`flex flex-col items-center text-xs ${activeRoute === 'customer' ? 'text-indigo-600 font-semibold' : 'text-gray-700'
+            className={`flex flex-col items-center text-[10px] ${activeRoute === 'customer' ? 'text-indigo-600 font-semibold' : 'text-gray-700'
               }`}
           >
             <IconWrapper
               color={activeRoute === 'customer' ? "bg-indigo-50" : "bg-gray-50"}
               isActive={activeRoute === 'customer'}
             >
-              <IoPersonOutline className="text-gray-500 lg:text-lg md:text-xl sm:text-lg" />
+              <IoPersonOutline className="text-indigo-500 lg:text-lg md:text-xl sm:text-xl" />
             </IconWrapper>
             Customers
           </button>

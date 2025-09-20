@@ -4,7 +4,7 @@ import axios from "axios";
 import { Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "http://194.164.148.244:4061/api/poster/festival";
+const API_URL = "https://api.editezy.com/api/poster/festival";
 
 // ✅ Convert selected local date -> backend UTC ISO format
 function toAPIDateString(date) {

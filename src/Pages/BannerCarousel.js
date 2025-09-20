@@ -11,7 +11,7 @@ const BannerCarousel = () => {
   // Fetch banners from the API
   useEffect(() => {
     axios
-      .get("http://194.164.148.244:4061/api/poster/getbanners")
+      .get("https://api.editezy.com/api/poster/getbanners")
       .then((response) => {
         setBanners(response.data);
         setLoading(false);

@@ -41,6 +41,7 @@ import Logo from "./Pages/Logo";
 import BackgroundRemover from "./Pages/BackgroundRemoval";
 import BusinessCardManager from "./Pages/BussinessCardManager";
 import ChatComponent from "./Pages/ChatPage";
+import Plans from "./Pages/Plans";
 
 function App() {
   return (
@@ -91,6 +92,7 @@ function App() {
         <Route path="/backgroundremoval" element={<BackgroundRemover />} />
         <Route path="/businesscard" element={<BusinessCardManager />} />
         <Route path="/chat" element={<ChatComponent />} />
+        <Route path="/plans" element={<Plans />} />
       </Routes>
     </Router>
   );

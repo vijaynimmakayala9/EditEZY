@@ -32,7 +32,7 @@ const HoroscopePage = () => {
         setLoading(true);
         setError(null);
         const res = await axios.get(
-          `http://194.164.148.244:4061/api/users/horoscope?sign=${selectedSign}`
+          `https://api.editezy.com/api/users/horoscope?sign=${selectedSign}`
         );
 
         // 🧹 clean text

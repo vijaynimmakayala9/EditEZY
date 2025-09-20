@@ -24,7 +24,7 @@ const StoryPage = () => {
   // Fetch all stories
   useEffect(() => {
     axios
-      .get("http://194.164.148.244:4061/api/users/getAllStories")
+      .get("https://api.editezy.com/api/users/getAllStories")
       .then((response) => {
         const validStories = response.data.stories.filter(
           (story) => new Date(story.expired_at) > new Date()
@@ -60,7 +60,7 @@ const StoryPage = () => {
 
     try {
       const response = await axios.post(
-        `http://194.164.148.244:4061/api/users/post/${userId}`,
+        `https://api.editezy.com/api/users/post/${userId}`,
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -97,7 +97,7 @@ const StoryPage = () => {
 
     try {
       await axios.delete(
-        `http://194.164.148.244:4061/api/users/deletestory/${userId}/${storyId}`,
+        `https://api.editezy.com/api/users/deletestory/${userId}/${storyId}`,
         {
           data: { mediaUrl },
         }
@@ -139,8 +139,8 @@ const StoryPage = () => {
     );
   }
 
-  // Find user's own story - CORRECTED: use story.user._id
-  const userStory = stories.find(story => story.user._id === userId);
+  // Find user's own story (safe check)
+  const userStory = stories.find((story) => story.user?._id === userId);
 
   return (
     <div className="container-fluid py-4">
@@ -159,7 +159,7 @@ const StoryPage = () => {
             onClick={() => handleOpenStory(userStory)}
           >
             <img
-              src={userStory.images?.[0] || userStory.user.profileImage}
+              src={userStory.images?.[0] || userStory.user?.profileImage}
               alt="story"
               style={{
                 width: "70px",
@@ -202,7 +202,7 @@ const StoryPage = () => {
 
         {/* Other Users' Stories */}
         {stories
-          .filter(story => story.user._id !== userId) // CORRECTED: use story.user._id
+          .filter((story) => story.user?._id !== userId)
           .map((story) => (
             <div
               key={story._id}
@@ -211,7 +211,7 @@ const StoryPage = () => {
               onClick={() => handleOpenStory(story)}
             >
               <img
-                src={story.images?.[0] || story.user.profileImage}
+                src={story.images?.[0] || story.user?.profileImage}
                 alt="story"
                 style={{
                   width: "70px",
@@ -224,7 +224,7 @@ const StoryPage = () => {
                   padding: "2px",
                 }}
               />
-              <p className="mt-2 small">{story.user.name}</p>
+              <p className="mt-2 small">{story.user?.name || "Unknown"}</p>
             </div>
           ))}
       </div>
@@ -281,7 +281,9 @@ const StoryPage = () => {
           <>
             <Modal.Header closeButton>
               <Modal.Title>{selectedStory.caption}</Modal.Title>
-              <span className="text-muted">by {selectedStory.user.name}</span>
+              <span className="text-muted">
+                by {selectedStory.user?.name || "Unknown"}
+              </span>
             </Modal.Header>
 
             <Modal.Body className="text-center">
@@ -293,7 +295,7 @@ const StoryPage = () => {
                     alt="story"
                     style={{ maxWidth: "100%", borderRadius: "10px" }}
                   />
-                  {selectedStory.user._id === userId && (
+                  {selectedStory.user?._id === userId && (
                     <FiTrash2
                       size={22}
                       color="red"
@@ -303,7 +305,9 @@ const StoryPage = () => {
                         top: "10px",
                         right: "10px",
                       }}
-                      onClick={() => handleDeleteStory(selectedStory._id, img)}
+                      onClick={() =>
+                        handleDeleteStory(selectedStory._id, img)
+                      }
                     />
                   )}
                 </div>
@@ -318,7 +322,7 @@ const StoryPage = () => {
                   >
                     <source src={vid} type="video/mp4" />
                   </video>
-                  {selectedStory.user._id === userId && (
+                  {selectedStory.user?._id === userId && (
                     <FiTrash2
                       size={22}
                       color="red"
@@ -328,7 +332,9 @@ const StoryPage = () => {
                         top: "10px",
                         right: "10px",
                       }}
-                      onClick={() => handleDeleteStory(selectedStory._id, vid)}
+                      onClick={() =>
+                        handleDeleteStory(selectedStory._id, vid)
+                      }
                     />
                   )}
                 </div>

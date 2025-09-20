@@ -3,13 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract, FaSignOutAlt } from "react-icons/fa";
 import {
   FaUser,
-  FaGear,
   FaGift,
   FaUsers,
   FaFileInvoice,
   FaBuilding,
   FaTrash,
-  FaCircleQuestion,
   FaEnvelope,
   FaWandMagicSparkles,
   FaNoteSticky,
@@ -31,6 +29,15 @@ export default function Dashboard() {
     setUserId(id);
     setUserName(name);
   }, []);
+
+  // ✅ Check plan validity from localStorage
+  const hasValidPlan = () => {
+    const plans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
+    if (plans.length === 0) return false;
+
+    const currentDate = new Date();
+    return plans.some((plan) => new Date(plan.endDate) > currentDate);
+  };
 
   // Tools tab items
   const tools = [
@@ -126,10 +133,33 @@ export default function Dashboard() {
 
   // Handle item click
   const handleItemClick = (item) => {
-    if (item.comingSoon) {
-      setModalText(`${item.name} is coming soon!`);
+    // Tools & Support → always accessible
+    if (activeTab === "Tools" || activeTab === "Support") {
+      if (item.comingSoon) {
+        setModalText(`${item.name} is coming soon!`);
+        setShowModal(true);
+      } else if (item.route.startsWith("http")) {
+        window.open(item.route, "_blank", "noopener,noreferrer");
+      } else {
+        navigate(item.route);
+      }
+      return;
+    }
+
+    // Account → check plan validity except My Profile & Refer & Earn
+    if (
+      !hasValidPlan() &&
+      item.name !== "My Profile" &&
+      item.name !== "Refer & Earn"
+    ) {
+      setModalText(
+        `You need a premium plan to access "${item.name}". Upgrade now!`
+      );
       setShowModal(true);
-    } else if (item.route.startsWith("http")) {
+      return;
+    }
+
+    if (item.route.startsWith("http")) {
       window.open(item.route, "_blank", "noopener,noreferrer");
     } else {
       navigate(item.route);
@@ -147,29 +177,25 @@ export default function Dashboard() {
             className="flex items-center text-gray-700 hover:text-gray-900"
           >
             <FaArrowLeft className="mr-2 text-xl" />
-            
           </button>
 
           {/* Title */}
-          <h1 className="text-xl font-bold text-center flex-1">
-            Dashboard
-          </h1>
+          <h1 className="text-xl font-bold text-center flex-1">Dashboard</h1>
 
           {/* Logout Button */}
           <button
             onClick={() => {
-              localStorage.removeItem("userId"); // Clear user session
+              localStorage.removeItem("userId");
               localStorage.removeItem("userName");
-              navigate("/"); // Redirect to login
+              navigate("/");
             }}
             className="flex items-center text-red-600 hover:text-red-800"
           >
             <FaSignOutAlt className="mr-2 text-xl" />
-            
           </button>
         </div>
 
-        {/* Tabs with Icons */}
+        {/* Tabs */}
         <div className="flex justify-around mb-4">
           {[
             { name: "Tools", icon: <FaTools /> },
@@ -179,8 +205,11 @@ export default function Dashboard() {
             <button
               key={tab.name}
               onClick={() => setActiveTab(tab.name)}
-              className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${activeTab === tab.name ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
+              className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${
+                activeTab === tab.name
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             >
               <span className="text-sm">{tab.icon}</span>
               <span className="text-sm">{tab.name}</span>
@@ -214,19 +243,19 @@ export default function Dashboard() {
               {item.icon}
               <div>
                 <h2 className="font-semibold text-lg">{item.name}</h2>
-                {item.desc && <p className="text-gray-500 text-sm">{item.desc}</p>}
+                {item.desc && (
+                  <p className="text-gray-500 text-sm">{item.desc}</p>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Coming Soon Modal */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-blue-900/40 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-lg border border-white/30 flex flex-col items-center space-y-4 animate-modal-in">
-
-            {/* Optional Info Icon */}
             <div className="flex justify-center">
               <svg
                 className="w-12 h-12 text-blue-400"
@@ -235,24 +264,38 @@ export default function Dashboard() {
                 strokeWidth="2"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
+                />
               </svg>
             </div>
 
-            {/* Modal Text */}
-            <h2 className="text-xl font-bold text-center text-black drop-shadow-md">{modalText}</h2>
+            <h2 className="text-xl font-bold text-center text-black drop-shadow-md">
+              {modalText}
+            </h2>
 
-            {/* Close Button */}
-            <button
-              onClick={() => setShowModal(false)}
-              className="w-full bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-500/60 transition-colors backdrop-blur-sm shadow-md font-semibold"
-            >
-              Close
-            </button>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl hover:bg-gray-300 transition-colors backdrop-blur-sm shadow-md font-semibold"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  navigate("/home");
+                }}
+                className="flex-1 bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-500/60 transition-colors backdrop-blur-sm shadow-md font-semibold"
+              >
+                Upgrade
+              </button>
+            </div>
           </div>
         </div>
       )}
-
     </>
   );
 }
