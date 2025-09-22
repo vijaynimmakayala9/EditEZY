@@ -48,6 +48,8 @@ const ContactUs = () => {
         setResponseMessage("Message sent successfully!");
         setFormData({ name: "", email: "", phone: "", message: "" });
       }
+      alert("Successfully received your message!");
+      navigate('/home');
     } catch (error) {
       setResponseMessage("Error sending message. Please try again.");
     } finally {

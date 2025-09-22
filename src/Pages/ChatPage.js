@@ -71,7 +71,7 @@ const ChatComponent = ({ onBack }) => {
     } catch (error) {
       console.error("Gemini API request failed:", error);
       return {
-        sender: "Allude! Assistant",
+        sender: "EDITEZY! Assistant",
         message: "I'm having trouble processing your request. Please try again later.",
       };
     }
@@ -131,7 +131,7 @@ const ChatComponent = ({ onBack }) => {
         <div className="space-y-3 sm:space-y-4">
           {chatMessages.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              <p>Start a conversation with Allude! Assistant</p>
+              <p>Ask anything to EDITEZY! Assistant</p>
               <p className="text-sm mt-2">Ask anything about our products or services</p>
             </div>
           ) : (

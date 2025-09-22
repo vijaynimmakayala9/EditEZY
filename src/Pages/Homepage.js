@@ -1,15 +1,30 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import BannerCarousel from "./BannerCarousel"; // 👈 import new banner component
+import BannerCarousel from "./BannerCarousel"; // Import new banner component
 import StoryPage from "./StoryPage";
 import FestivalPage from "./FestivalPage";
 import PremiumPoster from "./PremiumPoster";
 import CategoryWisePoster from "./CategoryWisePoster";
 import ProfileHeader from "./ProfileHeader";
 import Plans from "./Plans"; // Import the Plans component
+import ReferAndPay from "./ReferAndPay"; // Import the ReferAndPay component
 
 const HomePage = () => {
+  const [showReferModal, setShowReferModal] = useState(false); // State for the Refer and Earn modal
+
+  useEffect(() => {
+    // Automatically show the Refer and Earn modal when the page loads
+    setShowReferModal(true);
+
+    // Optionally, you could add conditions here to control when the modal should appear
+    // e.g., show once per session, after a delay, or based on other conditions
+  }, []);
+
+  const closeReferModal = () => {
+    setShowReferModal(false); // Close the Refer and Earn modal
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Navbar */}
@@ -38,6 +53,9 @@ const HomePage = () => {
 
       {/* Plans Modal Component */}
       <Plans />
+
+      {/* Refer and Earn Modal */}
+      {showReferModal && <ReferAndPay />}
     </div>
   );
 };

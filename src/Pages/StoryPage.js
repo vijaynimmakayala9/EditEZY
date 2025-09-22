@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Spinner, Modal, Button, Form } from "react-bootstrap";
-import { FiTrash2 } from "react-icons/fi";
+import { FiTrash2, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const StoryPage = () => {
   const [stories, setStories] = useState([]);
@@ -12,7 +12,9 @@ const StoryPage = () => {
   const [selectedStory, setSelectedStory] = useState(null);
   const [seenStories, setSeenStories] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
-
+  const [showNavigation, setShowNavigation] = useState({ left: false, right: true });
+  
+  const storiesContainerRef = useRef(null);
   const userId = localStorage.getItem("userId");
 
   // Load seenStories from localStorage
@@ -37,6 +39,32 @@ const StoryPage = () => {
         setLoading(false);
       });
   }, []);
+
+  // Check scroll position to show/hide navigation buttons
+  const checkScrollPosition = () => {
+    if (storiesContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = storiesContainerRef.current;
+      setShowNavigation({
+        left: scrollLeft > 0,
+        right: scrollLeft < scrollWidth - clientWidth - 10
+      });
+    }
+  };
+
+  // Scroll stories horizontally
+  const scrollStories = (direction) => {
+    if (storiesContainerRef.current) {
+      const scrollAmount = 300;
+      const newPosition = direction === 'left' 
+        ? Math.max(0, storiesContainerRef.current.scrollLeft - scrollAmount)
+        : storiesContainerRef.current.scrollLeft + scrollAmount;
+      
+      storiesContainerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
+      
+      // Check position after scrolling
+      setTimeout(checkScrollPosition, 300);
+    }
+  };
 
   // Handle file input change
   const handleFileChange = (e) => {
@@ -146,87 +174,124 @@ const StoryPage = () => {
     <div className="container-fluid py-4">
       <h2 className="mb-3">Stories</h2>
 
-      {/* Stories Row */}
-      <div
-        className="d-flex align-items-center mb-4"
-        style={{ overflowX: "auto", gap: "15px" }}
-      >
-        {/* User's Story */}
-        {userStory ? (
-          <div
-            className="d-flex flex-column align-items-center"
-            style={{ cursor: "pointer" }}
-            onClick={() => handleOpenStory(userStory)}
+      {/* Stories Row with Carousel */}
+      <div className="position-relative mb-4">
+        {showNavigation.left && (
+          <Button
+            variant="light"
+            className="position-absolute start-0 top-50 translate-middle-y rounded-circle p-1 shadow"
+            style={{ zIndex: 2, left: "-15px" }}
+            onClick={() => scrollStories('left')}
           >
-            <img
-              src={userStory.images?.[0] || userStory.user?.profileImage}
-              alt="story"
-              style={{
-                width: "70px",
-                height: "70px",
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: seenStories.includes(userStory._id)
-                  ? "3px solid gray"
-                  : "3px solid green",
-                padding: "2px",
-              }}
-            />
-            <p className="mt-2 small">Your Story</p>
-          </div>
-        ) : (
-          // Upload Story Button (only shown if user has no active story)
-          <div
-            className="d-flex flex-column align-items-center"
-            style={{ cursor: "pointer" }}
-            onClick={() => setShowUploadModal(true)}
-          >
-            <div
-              style={{
-                width: "70px",
-                height: "70px",
-                borderRadius: "50%",
-                border: "2px dashed #888",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "30px",
-                color: "#888",
-              }}
-            >
-              +
-            </div>
-            <p className="mt-2 small">Your Story</p>
-          </div>
+            <FiChevronLeft size={20} />
+          </Button>
         )}
-
-        {/* Other Users' Stories */}
-        {stories
-          .filter((story) => story.user?._id !== userId)
-          .map((story) => (
+        
+        <div
+          ref={storiesContainerRef}
+          className="d-flex align-items-center"
+          style={{ 
+            overflowX: "auto", 
+            gap: "15px",
+            scrollBehavior: "smooth",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            padding: "5px 10px"
+          }}
+          onScroll={checkScrollPosition}
+        >
+          {/* User's Story */}
+          {userStory ? (
             <div
-              key={story._id}
               className="d-flex flex-column align-items-center"
-              style={{ cursor: "pointer" }}
-              onClick={() => handleOpenStory(story)}
+              style={{ cursor: "pointer", flexShrink: 0 }}
+              onClick={() => handleOpenStory(userStory)}
             >
               <img
-                src={story.images?.[0] || story.user?.profileImage}
+                src={userStory.images?.[0] || userStory.user?.profileImage}
                 alt="story"
                 style={{
                   width: "70px",
                   height: "70px",
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border: seenStories.includes(story._id)
+                  border: seenStories.includes(userStory._id)
                     ? "3px solid gray"
                     : "3px solid green",
                   padding: "2px",
                 }}
               />
-              <p className="mt-2 small">{story.user?.name || "Unknown"}</p>
+              <p className="mt-2 small text-center" style={{ width: "70px" }}>Your Story</p>
             </div>
-          ))}
+          ) : (
+            // Upload Story Button (only shown if user has no active story)
+            <div
+              className="d-flex flex-column align-items-center"
+              style={{ cursor: "pointer", flexShrink: 0 }}
+              onClick={() => setShowUploadModal(true)}
+            >
+              <div
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  borderRadius: "50%",
+                  border: "2px dashed #888",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  fontSize: "30px",
+                  color: "#888",
+                }}
+              >
+                +
+              </div>
+              <p className="mt-2 small text-center" style={{ width: "70px" }}>Your Story</p>
+            </div>
+          )}
+
+          {/* Other Users' Stories */}
+          {stories
+            .filter((story) => story.user?._id !== userId)
+            .map((story) => (
+              <div
+                key={story._id}
+                className="d-flex flex-column align-items-center"
+                style={{ cursor: "pointer", flexShrink: 0 }}
+                onClick={() => handleOpenStory(story)}
+              >
+                <img
+                  src={story.images?.[0] || story.user?.profileImage}
+                  alt="story"
+                  style={{
+                    width: "70px",
+                    height: "70px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: seenStories.includes(story._id)
+                      ? "3px solid gray"
+                      : "3px solid green",
+                    padding: "2px",
+                  }}
+                />
+                <p className="mt-2 small text-center" style={{ width: "70px" }}>
+                  {story.user?.name && story.user.name.length > 10 
+                    ? `${story.user.name.substring(0, 10)}...` 
+                    : story.user?.name || "Unknown"}
+                </p>
+              </div>
+            ))}
+        </div>
+
+        {showNavigation.right && (
+          <Button
+            variant="light"
+            className="position-absolute end-0 top-50 translate-middle-y rounded-circle p-1 shadow"
+            style={{ zIndex: 2, right: "-15px" }}
+            onClick={() => scrollStories('right')}
+          >
+            <FiChevronRight size={20} />
+          </Button>
+        )}
       </div>
 
       {/* Upload Story Modal */}
