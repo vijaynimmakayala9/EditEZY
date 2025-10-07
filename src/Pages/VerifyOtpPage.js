@@ -28,8 +28,14 @@ const VerifyOtpPage = () => {
 
       if (response.status === 200) {
         const { user } = response.data;
-        localStorage.setItem("userId", user._id);
-        localStorage.setItem("userName", user.name);
+        const { _id, name, mobile } = user;
+
+        localStorage.setItem("userId", _id);
+        localStorage.setItem("userName", name);
+        localStorage.setItem("userMobile", mobile);
+        console.log("userId", _id, );
+        console.log("Name", name, );
+        console.log("mobile", mobile, );
 
         navigate("/home");
       }

@@ -68,84 +68,99 @@ const SinglePlan = () => {
     fetchPlan();
   }, [id]);
 
-  const handlePurchase = async () => {
-    if (!user) {
-      setResponseMessage("Please log in to purchase a plan.");
-      return;
-    }
+ const handlePurchase = async () => {
+  if (!user) {
+    setResponseMessage("Please log in to purchase a plan.");
+    return;
+  }
 
-    if (!razorpayLoaded) {
-      setResponseMessage("Payment gateway is still loading. Please try again in a moment.");
-      return;
-    }
+  if (!razorpayLoaded) {
+    setResponseMessage("Payment gateway is still loading. Please try again in a moment.");
+    return;
+  }
 
-    setResponseMessage("Processing payment...");
+  setResponseMessage("Processing payment...");
 
-    try {
-      // Calculate amount (same logic as backend)
-      let offerPrice = plan.offerPrice ?? plan.originalPrice ?? 0;
-      if (user.referredBy && offerPrice > 100) offerPrice -= 100;
-      const amount = Math.round(offerPrice * 100); // Convert to paise
+  try {
+    // Calculate amount (same logic as backend)
+    let offerPrice = plan.offerPrice ?? plan.originalPrice ?? 0;
+    if (user.referredBy && offerPrice > 100) offerPrice -= 100;
+    const amount = Math.round(offerPrice * 100); // Convert to paise
 
-      // Create Razorpay order options
-      const options = {
-        key: "rzp_test_BxtRNvflG06PTV",
-        amount: amount,
-        currency: "INR",
-        name: "Your Company Name",
-        description: `Purchase ${plan.name}`,
-        image: "https://your-logo-url.com/logo.png",
-        handler: async function (response) {
-          // Send payment verification to your backend
-          try {
-            setResponseMessage("Verifying payment...");
+    // Create Razorpay order options
+    const options = {
+      key: "rzp_live_QbfofYHBZgtn7V",
+      amount: amount,
+      currency: "INR",
+      name: "Your Company Name",
+      description: `Purchase ${plan.name}`,
+      image: "https://your-logo-url.com/logo.png",
+      handler: async function (response) {
+        // Send payment verification to your backend
+        try {
+          setResponseMessage("Verifying payment...");
 
-            const verificationResponse = await axios.post("https://api.editezy.com/api/payment/payWithRazorpay", {
-              userId: user._id,
+          const verificationResponse = await axios.post("https://api.editezy.com/api/payment/phonepe", {
+            userId: user._id,
+            planId: plan._id,
+            transactionId: response.razorpay_payment_id
+          });
+
+          if (verificationResponse.data.success) {
+            setResponseMessage(`Payment successful! ${verificationResponse.data.message}`);
+
+            // Update localStorage with the purchased plan details
+            const newSubscription = {
               planId: plan._id,
-              transactionId: response.razorpay_payment_id
-            });
+              startDate: new Date(),
+              endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // Assuming 1 month subscription
+            };
 
-            if (verificationResponse.data.success) {
-              setResponseMessage(`Payment successful! ${verificationResponse.data.message}`);
-              // Update user data in localStorage if needed
+            // Add to subscribed plans or create the array if it doesn't exist
+            const subscribedPlans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
+            subscribedPlans.push(newSubscription);
 
-              // Redirect or show success message
-            } else {
-              setResponseMessage(`Payment failed: ${verificationResponse.data.message}`);
-            }
-          } catch (error) {
-            console.error("Error during payment verification", error);
-            setResponseMessage("Error during payment verification. Please contact support.");
+            localStorage.setItem("subscribedPlans", JSON.stringify(subscribedPlans));
+
+            // Redirect the user to the homepage or a success page
+            window.location.href = "/";  // Redirect to the homepage after successful payment
+
+          } else {
+            setResponseMessage(`Payment failed: ${verificationResponse.data.message}`);
           }
-        },
-        prefill: {
-          name: user.name || "Customer",
-          email: user.email || "customer@example.com",
-          contact: user.phone || "9999999999"
-        },
-        notes: {
-          planId: plan._id,
-          userId: user._id
-        },
-        theme: {
-          color: "#4f46e5"
+        } catch (error) {
+          console.error("Error during payment verification", error);
+          setResponseMessage("Error during payment verification. Please contact support.");
         }
-      };
+      },
+      prefill: {
+        name: user.name || "Customer",
+        email: user.email || "customer@example.com",
+        contact: user.phone || "9999999999"
+      },
+      notes: {
+        planId: plan._id,
+        userId: user._id
+      },
+      theme: {
+        color: "#4f46e5"
+      }
+    };
 
-      const razorpayInstance = new window.Razorpay(options);
+    const razorpayInstance = new window.Razorpay(options);
 
-      razorpayInstance.on('payment.failed', function (response) {
-        console.error("Payment failed:", response.error);
-        setResponseMessage(`Payment failed: ${response.error.reason || "Unknown error"}`);
-      });
+    razorpayInstance.on('payment.failed', function (response) {
+      console.error("Payment failed:", response.error);
+      setResponseMessage(`Payment failed: ${response.error.reason || "Unknown error"}`);
+    });
 
-      razorpayInstance.open();
-    } catch (error) {
-      console.error("Error initiating payment", error);
-      setResponseMessage("Error initiating payment. Please try again.");
-    }
-  };
+    razorpayInstance.open();
+  } catch (error) {
+    console.error("Error initiating payment", error);
+    setResponseMessage("Error initiating payment. Please try again.");
+  }
+};
+
 
   if (isLoading) {
     return (

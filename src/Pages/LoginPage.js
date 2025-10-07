@@ -9,90 +9,59 @@ const LoginPage = () => {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isSafari, setIsSafari] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const navigate = useNavigate();
 
-  // Detect device and browser types
+  // Check if user is already logged in
   useEffect(() => {
-    // Check if device is mobile/tablet
-    const checkMobileDevice = () => {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      navigate("/home"); // Replace with your main page route
+    }
+  }, [navigate]);
+
+  // Detect device, browser, and PWA install status
+  useEffect(() => {
+    const checkMobileDevice = () =>
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
-    };
-
     setIsMobileDevice(checkMobileDevice());
 
-    // Check if app is already installed
-    const checkIfInstalled = () => {
-      return (
-        window.matchMedia("(display-mode: standalone)").matches ||
-        window.navigator.standalone === true
-      );
-    };
-
+    const checkIfInstalled = () =>
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
     setIsStandalone(checkIfInstalled());
 
-    // Check if iOS
-    const iosCheck = () => {
-      return (
-        [
-          "iPad Simulator",
-          "iPhone Simulator",
-          "iPod Simulator",
-          "iPad",
-          "iPhone",
-          "iPod",
-        ].includes(navigator.platform) ||
-        (navigator.userAgent.includes("Mac") && "ontouchend" in document)
-      );
-    };
-
+    const iosCheck = () =>
+      ["iPad Simulator", "iPhone Simulator", "iPod Simulator", "iPad", "iPhone", "iPod"].includes(
+        navigator.platform
+      ) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
     setIsIOS(iosCheck());
 
-    // Check if Safari
-    const isSafariCheck = /^((?!chrome|android).)*safari/i.test(
-      navigator.userAgent
-    );
-    setIsSafari(isSafariCheck);
-
-    // Handle beforeinstallprompt event for Android
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-
-      // Only show modal if not installed and on mobile device
-      if (!checkIfInstalled() && checkMobileDevice()) {
-        setShowInstallPrompt(true);
-      }
+      if (!checkIfInstalled() && checkMobileDevice()) setShowInstallPrompt(true);
     };
 
-    // Handle app installed event
     const handleAppInstalled = () => {
       localStorage.setItem("appInstalled", "true");
       setShowInstallPrompt(false);
       setIsStandalone(true);
     };
 
-    // For iOS Safari users, only show modal if not installed and on mobile device
     const checkIOSInstallPrompt = () => {
-      if (iosCheck() && !checkIfInstalled() && checkMobileDevice()) {
-        setShowInstallPrompt(true);
-      }
+      if (iosCheck() && !checkIfInstalled() && checkMobileDevice()) setShowInstallPrompt(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
-
     const timer = setTimeout(checkIOSInstallPrompt, 3000);
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt
-      );
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
       clearTimeout(timer);
     };
@@ -102,21 +71,17 @@ const LoginPage = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-
       if (outcome === "accepted") {
         localStorage.setItem("appInstalled", "true");
         setShowInstallPrompt(false);
       }
       setDeferredPrompt(null);
     } else if (isIOS) {
-      // Show instructions for iOS
       setShowInstallPrompt(true);
     }
   };
 
-  const handleDismissPrompt = () => {
-    setShowInstallPrompt(false);
-  };
+  const handleDismissPrompt = () => setShowInstallPrompt(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -129,39 +94,31 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "https://api.editezy.com/api/users/login",
-        { mobile }
-      );
+      const response = await axios.post("https://api.editezy.com/api/users/login", { mobile });
 
       if (response.status === 200) {
-        // Assuming the response includes user information such as email
         const { user } = response.data;
-        const { _id, name, email, mobile, subscribedPlans } = user;
+        const { name, email, mobile, subscribedPlans } = user;
 
-        // Store user data (mobile, email, name, subscribedPlans) in localStorage
-        localStorage.setItem("userId", _id);
+        
         localStorage.setItem("userName", name);
         localStorage.setItem("userEmail", email);
         localStorage.setItem("userMobile", mobile);
+        localStorage.setItem("subscribedPlans", JSON.stringify(subscribedPlans || []));
+        console.log("subscribedPlans", subscribedPlans, );
+        console.log("Name", name, );
+        console.log("mobile", mobile, );
 
-        // ✅ Store subscribedPlans as JSON string
-        if (subscribedPlans && subscribedPlans.length > 0) {
-          localStorage.setItem("subscribedPlans", JSON.stringify(subscribedPlans));
-        } else {
-          localStorage.setItem("subscribedPlans", "[]"); // empty array if no plans
-        }
 
-        // Navigate to OTP verification page
         navigate("/verify-otp");
       }
-    } catch (error) {
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed.");
+    } finally {
       setLoading(false);
-      setError(error.response?.data?.message || "Login failed.");
     }
   };
 
-  // Instructions for iOS Safari users
   const iOSInstallInstructions = () => (
     <div className="mt-4 text-left text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
       <p className="font-medium mb-2">To install this app:</p>
@@ -192,7 +149,7 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50">
-      {/* Install Prompt Modal - Only show for mobile devices */}
+      {/* Install Prompt Modal */}
       {!isStandalone && showInstallPrompt && isMobileDevice && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
@@ -213,9 +170,7 @@ const LoginPage = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                Install App
-              </h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Install App</h3>
               <p className="text-gray-600 mb-4">
                 {isIOS
                   ? "Install this app on your iPhone for a better experience."
@@ -254,7 +209,6 @@ const LoginPage = () => {
         </div>
       )}
 
-      {/* Rest of your login page UI remains the same */}
       {/* Left side */}
       <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-indigo-600 to-purple-700 items-center justify-center p-12">
         <div className="text-white text-center max-w-md">
@@ -267,14 +221,10 @@ const LoginPage = () => {
               />
             </div>
             <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
-            <p className="text-lg opacity-90">
-              Sign in to continue creating amazing content
-            </p>
+            <p className="text-lg opacity-90">Sign in to continue creating amazing content</p>
           </div>
           <div className="mt-16">
-            <p className="text-sm opacity-80">
-              Your creative journey continues here
-            </p>
+            <p className="text-sm opacity-80">Your creative journey continues here</p>
           </div>
         </div>
       </div>
@@ -285,41 +235,26 @@ const LoginPage = () => {
           {/* Logo - Mobile */}
           <div className="md:hidden flex justify-center mb-8">
             <div className="w-20 h-20 rounded-full flex items-center justify-center">
-              <img
-                src="/logo.png"
-                className="w-16 h-16 object-contain rounded-circle"
-                alt="Logo"
-              />
+              <img src="/logo.png" className="w-16 h-16 object-contain rounded-circle" alt="Logo" />
             </div>
           </div>
 
           {/* Welcome - Mobile */}
           <div className="md:hidden text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
-              Welcome Back!
-            </h1>
-            <p className="text-gray-600">
-              Sign in to continue creating amazing content
-            </p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back!</h1>
+            <p className="text-gray-600">Sign in to continue creating amazing content</p>
           </div>
 
           <div className="bg-white p-8 rounded-xl shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6">
-              Phone Number
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">Phone Number</h2>
 
             {error && (
-              <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-6 text-sm">
-                {error}
-              </div>
+              <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-6 text-sm">{error}</div>
             )}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label
-                  htmlFor="mobile"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-2">
                   Mobile Number
                 </label>
                 <div className="flex">
@@ -335,9 +270,7 @@ const LoginPage = () => {
                     id="mobile"
                     value={mobile}
                     onChange={(e) => {
-                      const value = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10);
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
                       setMobile(value);
                       setError("");
                     }}
@@ -403,33 +336,33 @@ const LoginPage = () => {
 
           {/* Footer - Mobile */}
           <div className="md:hidden mt-8 text-center text-sm text-gray-500">
-            <p>
-              Install for quick access to EzyStudio
-            </p>
+            <p>Install for quick access to EzyStudio</p>
           </div>
 
-          {/* Manual Add to Home Screen - Only show for mobile devices */}
+          {/* Manual Add to Home Screen */}
           {!isStandalone && isMobileDevice && (
             <div className="mt-6 text-center md:hidden">
               <button
                 onClick={() => setShowInstallPrompt(true)}
                 className="relative inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-full shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-400"
               >
-                {/* Floating plus icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-
                 Download Our App Now
-                {/* Glow effect */}
                 <span className="absolute inset-0 rounded-full bg-white opacity-10 blur-xl animate-pulse"></span>
               </button>
-
             </div>
           )}
-
         </div>
       </div>
     </div>

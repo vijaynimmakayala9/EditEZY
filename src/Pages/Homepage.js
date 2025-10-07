@@ -1,29 +1,61 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Navbar from "./Navbar";
-import Footer from "./Footer";
-import BannerCarousel from "./BannerCarousel"; // Import new banner component
+import ProfileHeader from "./ProfileHeader";
+import BannerCarousel from "./BannerCarousel";
 import StoryPage from "./StoryPage";
 import FestivalPage from "./FestivalPage";
-import PremiumPoster from "./PremiumPoster";
 import CategoryWisePoster from "./CategoryWisePoster";
-import ProfileHeader from "./ProfileHeader";
 import Plans from "./Plans"; // Import the Plans component
-import ReferAndPay from "./ReferAndPay"; // Import the ReferAndPay component
+import ReferModal from "./ReferAndPay";
+import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
   const [showReferModal, setShowReferModal] = useState(false); // State for the Refer and Earn modal
+  const [isModalOpen, setIsModalOpen] = useState(false);  // State to control Plans modal visibility
+  const [referralCode, setReferralCode] = useState("");
+  const [hasValidPlan, setHasValidPlan] = useState(false); // State to track if user has valid plan
 
+  const navigate = useNavigate();
+
+  // ✅ Check if user has a valid plan
+  const checkUserPlan = () => {
+    const subscribedPlans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
+    if (subscribedPlans.length === 0) return false;
+
+    const currentDate = new Date();
+    return subscribedPlans.some((plan) => new Date(plan.endDate) > currentDate);
+  };
+
+  // Fetch referral code and set modal state
   useEffect(() => {
-    // Automatically show the Refer and Earn modal when the page loads
-    setShowReferModal(true);
+    const fetchReferralCode = async () => {
+      try {
+        const userId = localStorage.getItem("userId");
+        if (!userId) return;
 
-    // Optionally, you could add conditions here to control when the modal should appear
-    // e.g., show once per session, after a delay, or based on other conditions
+        const response = await axios.get(`https://api.editezy.com/api/users/refferalcode/${userId}`);
+        setReferralCode(response.data.referralCode); // Adjust according to API response
+        setShowReferModal(true); // Open modal automatically once code is fetched
+      } catch (error) {
+        console.error("Failed to fetch referral code:", error);
+      }
+    };
+
+    fetchReferralCode();
   }, []);
 
-  const closeReferModal = () => {
-    setShowReferModal(false); // Close the Refer and Earn modal
-  };
+  // Check if user has a valid plan, and set state accordingly
+  useEffect(() => {
+    // Every time component mounts or rerenders, check the user's plan
+    const validPlan = checkUserPlan();
+    setHasValidPlan(validPlan);
+
+    // If the user doesn't have a valid plan, show the Plans modal immediately
+    if (!validPlan) {
+      setIsModalOpen(true);  // Open the "Plans" modal if no valid plan is found
+    }
+  }, []);  // Empty dependency array ensures this effect runs only once on mount
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -32,9 +64,12 @@ const HomePage = () => {
         <Navbar />
       </div>
 
+      {/* Content Section */}
       <div className="pt-[90px] bg-gray-50 flex-1 mb-5">
-        {/* Banner */}
+        {/* Profile Header (ensure this is rendered first) */}
         <ProfileHeader />
+        
+        {/* Banner */}
         <div className="my-2">
           <BannerCarousel />
         </div>
@@ -42,20 +77,20 @@ const HomePage = () => {
         {/* Other Sections */}
         <StoryPage />
         <FestivalPage />
-        {/* <PremiumPoster /> */}
         <CategoryWisePoster />
       </div>
 
-      {/* Footer */}
-      {/* <div className="mt-auto">
-        <Footer />
-      </div> */}
+      {/* Refer Modal */}
+      <ReferModal
+        isOpen={showReferModal}
+        onClose={() => setShowReferModal(false)}
+        referralCode={referralCode}
+      />
 
-      {/* Plans Modal Component */}
-      <Plans />
-
-      {/* Refer and Earn Modal */}
-      {showReferModal && <ReferAndPay />}
+      {/* Show Plans Modal only if no valid plan is found */}
+      {isModalOpen && !hasValidPlan && (
+        <Plans />
+      )}
     </div>
   );
 };

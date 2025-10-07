@@ -1,308 +1,310 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const RegisterPage = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [dob, setDob] = useState("");
-  const [marriageAnniversaryDate, setMarriageAnniversaryDate] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobile: "",
+    dob: "",
+    marriageAnniversaryDate: "",
+    referralCode: ""
+  });
   const [error, setError] = useState("");
-  const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check screen size and update state
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    // Initial check
-    checkScreenSize();
-    
-    // Add event listener
-    window.addEventListener('resize', checkScreenSize);
-    
-    // Clean up
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    const { name, mobile, dob } = formData;
+    
     if (!name || !mobile || !dob) {
       setError("Name, Mobile, and Date of Birth are required.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Mobile number validation
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobileRegex.test(mobile)) {
+      setError("Please enter a valid 10-digit mobile number.");
+      setIsLoading(false);
+      return;
+    }
+
+    // Date validation
+    const currentDate = new Date();
+    const dobDate = new Date(dob);
+    if (dobDate >= currentDate) {
+      setError("Date of Birth must be in the past.");
+      setIsLoading(false);
       return;
     }
 
     try {
       const response = await axios.post(
         "https://api.editezy.com/api/users/register",
-        { name, email, mobile, dob, marriageAnniversaryDate, referralCode }
+        formData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
 
       if (response.status === 201) {
-        navigate("/");
+        // Reset form
+        setFormData({
+          name: "",
+          email: "",
+          mobile: "",
+          dob: "",
+          marriageAnniversaryDate: "",
+          referralCode: ""
+        });
+        
+        // Redirect to login or success page
+        navigate("/", { 
+          state: { message: "Registration successful! Please login." } 
+        });
       }
     } catch (error) {
-      setError(error.response?.data?.message || "Registration failed.");
+      setError(error.response?.data?.message || "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Desktop Layout (shown on screens 768px and wider)
-  const DesktopLayout = () => (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        {/* Left Side - Illustration */}
-        <div className="md:w-1/2 bg-gradient-to-br from-blue-600 to-purple-600 p-8 flex items-center justify-center">
-          <div className="text-white text-center">
-            <h2 className="text-3xl font-bold mb-4">Join Our Creative Community</h2>
-            <p className="mb-6">Sign up today to access exclusive features and content</p>
-            <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6">
-              <img
-                src="https://tse1.mm.bing.net/th/id/OIP.tmAZhRsXj4wCMaCSRzVqSQHaGl?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
-                alt="Creative Community"
-                className="rounded-lg shadow-lg mx-auto"
-              />
+  return (
+    <div className="container-fluid min-vh-100 d-flex align-items-center justify-content-center bg-light py-4">
+      <div className="row w-100 justify-content-center">
+        <div className="col-12 col-md-10 col-lg-8 col-xl-6">
+          {/* Card Container */}
+          <div className="card shadow-lg border-0 rounded-3 overflow-hidden">
+            <div className="row g-0">
+              {/* Left Side - Illustration (Hidden on mobile) */}
+              <div className="col-md-6 d-none d-md-flex bg-primary">
+                <div className="card-body d-flex flex-column justify-content-center align-items-center text-white p-4 p-lg-5">
+                  <div className="text-center mb-4">
+                    <i className="bi bi-person-plus-fill display-1 mb-3"></i>
+                    <h2 className="h3 fw-bold">Join Our Community</h2>
+                    <p className="mb-0">Create your account and start your journey with us</p>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <div className="bg-white bg-opacity-10 rounded-3 p-3">
+                      <i className="bi bi-shield-check display-4 d-block mb-2"></i>
+                      <h5 className="fw-bold">Secure & Reliable</h5>
+                      <small>Your data is protected with advanced security</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side - Form */}
+              <div className="col-md-6">
+                <div className="card-body p-4 p-lg-5">
+                  {/* Header */}
+                  <div className="text-center mb-4">
+                    <h1 className="h3 fw-bold text-primary">Create Account</h1>
+                    <p className="text-muted">Please fill in the details below</p>
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="alert alert-danger d-flex align-items-center" role="alert">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      <div>{error}</div>
+                    </div>
+                  )}
+
+                  {/* Registration Form */}
+                  <form onSubmit={handleSubmit} noValidate>
+                    {/* Full Name */}
+                    <div className="mb-3">
+                      <label htmlFor="name" className="form-label fw-semibold">
+                        Full Name <span className="text-danger">*</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-person text-muted"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control border-start-0"
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          placeholder="Enter your full name"
+                          required
+                        />
+                      </div>
+                      <div className="form-text">Please enter your full legal name</div>
+                    </div>
+
+                    {/* Email Address */}
+                    <div className="mb-3">
+                      <label htmlFor="email" className="form-label fw-semibold">
+                        Email Address <span className="text-muted">(Optional)</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-envelope text-muted"></i>
+                        </span>
+                        <input
+                          type="email"
+                          className="form-control border-start-0"
+                          id="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="Enter your email address"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mobile Number */}
+                    <div className="mb-3">
+                      <label htmlFor="mobile" className="form-label fw-semibold">
+                        Mobile Number <span className="text-danger">*</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-phone text-muted"></i>
+                        </span>
+                        <input
+                          type="tel"
+                          className="form-control border-start-0"
+                          id="mobile"
+                          name="mobile"
+                          value={formData.mobile}
+                          onChange={handleInputChange}
+                          placeholder="Enter 10-digit mobile number"
+                          pattern="[0-9]{10}"
+                          maxLength="10"
+                          required
+                        />
+                      </div>
+                      <div className="form-text">10 digits without country code</div>
+                    </div>
+
+                    {/* Date of Birth */}
+                    <div className="mb-3">
+                      <label htmlFor="dob" className="form-label fw-semibold">
+                        Date of Birth <span className="text-danger">*</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-calendar-event text-muted"></i>
+                        </span>
+                        <input
+                          type="date"
+                          className="form-control border-start-0"
+                          id="dob"
+                          name="dob"
+                          value={formData.dob}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Marriage Anniversary */}
+                    <div className="mb-3">
+                      <label htmlFor="marriageAnniversaryDate" className="form-label fw-semibold">
+                        Marriage Anniversary <span className="text-muted">(Optional)</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-heart text-muted"></i>
+                        </span>
+                        <input
+                          type="date"
+                          className="form-control border-start-0"
+                          id="marriageAnniversaryDate"
+                          name="marriageAnniversaryDate"
+                          value={formData.marriageAnniversaryDate}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Referral Code */}
+                    <div className="mb-4">
+                      <label htmlFor="referralCode" className="form-label fw-semibold">
+                        Referral Code <span className="text-muted">(Optional)</span>
+                      </label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0">
+                          <i className="bi bi-gift text-muted"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control border-start-0"
+                          id="referralCode"
+                          name="referralCode"
+                          value={formData.referralCode}
+                          onChange={handleInputChange}
+                          placeholder="Enter referral code (if any)"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="d-grid gap-2">
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-lg fw-semibold"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Creating Account...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-person-plus me-2"></i>
+                            Create Account
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Login Link */}
+                  <div className="text-center mt-4">
+                    <p className="text-muted mb-0">
+                      Already have an account?{" "}
+                      <a href="/" className="text-primary text-decoration-none fw-semibold">
+                        Sign In
+                      </a>
+                    </p>
+                  </div>
+
+                  
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Right Side - Form */}
-        <div className="w-full md:w-1/2 p-6 md:p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
-            <p className="text-gray-600">Join our creative community today</p>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-6 text-center">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address (Optional)
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Enter your email address"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
-                Mobile Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                id="mobile"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Enter your mobile number"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-1">
-                Date of Birth <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                id="dob"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="marriageAnniversaryDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Marriage Anniversary (Optional)
-              </label>
-              <input
-                type="date"
-                id="marriageAnniversaryDate"
-                value={marriageAnniversaryDate}
-                onChange={(e) => setMarriageAnniversaryDate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Referral Code (Optional)
-              </label>
-              <input
-                type="text"
-                id="referralCode"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Enter referral code (if any)"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition shadow-md"
-            >
-              Create Account
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <a href="/" className="text-blue-600 font-medium hover:underline">
-                Sign In
-              </a>
-            </p>
           </div>
         </div>
       </div>
     </div>
   );
-
-  // Mobile Layout (shown on screens smaller than 768px)
-  const MobileLayout = () => (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Create Account</h1>
-          <p className="text-blue-100">Join our creative community today</p>
-        </div>
-
-        <div className="p-6">
-          {error && (
-            <div className="bg-red-50 text-red-700 p-3 rounded-lg mb-4 text-center">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Full Name */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Full Name</h2>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-
-            {/* Email Address */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Email Address (Optional)</h2>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your email address"
-              />
-            </div>
-
-            {/* Mobile Number */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Mobile Number</h2>
-              <input
-                type="tel"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your mobile number"
-                required
-              />
-            </div>
-
-            {/* Date of Birth */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Date of Birth</h2>
-              <input
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            {/* Referral Code */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Referral Code (Optional)</h2>
-              <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter referral code"
-              />
-            </div>
-
-            {/* Marriage Anniversary */}
-            <div className="bg-gray-50 p-4 rounded-xl">
-              <h2 className="text-lg font-semibold text-gray-800 mb-2">Marriage Anniversary (Optional)</h2>
-              <input
-                type="date"
-                value={marriageAnniversaryDate}
-                onChange={(e) => setMarriageAnniversaryDate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-4 rounded-xl font-bold text-lg shadow-md hover:from-blue-700 hover:to-purple-700 transition mt-2"
-            >
-              Create Account
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <a href="/" className="text-blue-600 font-semibold hover:underline">
-                Sign In
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Render the appropriate layout based on screen size
-  return isMobile ? <MobileLayout /> : <DesktopLayout />;
 };
 
 export default RegisterPage;

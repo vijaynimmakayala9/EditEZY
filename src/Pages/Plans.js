@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { MdOutlineStarPurple500 } from "react-icons/md"; // ⭐ purple star icon
 
 const Plans = () => {
   const [plans, setPlans] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const location = useLocation();
   const navigate = useNavigate();
 
   // ✅ Check if user has a valid plan
@@ -45,13 +46,17 @@ const Plans = () => {
 
   const closeModal = () => {
     setIsModalOpen(false);
+
+    if (location.pathname === "/plans") {
+      navigate(-1);
+    }
   };
 
   return (
     <>
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 px-3"
+          className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[9999] px-3"
           onClick={closeModal}
         >
           <div

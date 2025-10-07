@@ -159,7 +159,7 @@ const CreativeStudio = () => {
                 <button
                   onClick={() => {
                     setShowModal(false);
-                    navigate("/home");
+                    navigate("/plans");
                   }}
                   className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-medium"
                 >

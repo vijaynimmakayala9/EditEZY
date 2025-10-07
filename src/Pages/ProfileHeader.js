@@ -74,7 +74,7 @@ const ProfileHeader = () => {
           <button className="bg-white/20 p-2 rounded-full hover:bg-white/30" onClick={()=>navigate('/chat')}>
             <FaRobot className="text-white w-5 h-5" />
           </button>
-          <button className="bg-white/20 p-2 rounded-full hover:bg-white/30" onClick={()=>navigate('/refer')}>
+          <button className="bg-white/20 p-2 rounded-full hover:bg-white/30" onClick={()=>navigate('/referpage')}>
             <Gift className="text-white w-5 h-5" />
           </button>
           

@@ -264,14 +264,21 @@ const CustomerPage = () => {
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date of Birth
+                </label>
                 <input
                   type="date"
                   value={form.dob}
                   onChange={(e) =>
                     setForm({ ...form, dob: e.target.value })
                   }
-                  className="w-full border rounded-lg p-2"
+                  className="w-full border rounded-lg p-2 mb-4"
                 />
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marriage Anniversary
+                </label>
                 <input
                   type="date"
                   value={form.marriageAnniversaryDate}
@@ -283,6 +290,7 @@ const CustomerPage = () => {
                   }
                   className="w-full border rounded-lg p-2"
                 />
+
                 <input
                   type="text"
                   placeholder="Address (Optional)"

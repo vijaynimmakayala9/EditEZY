@@ -74,7 +74,7 @@ export default function Dashboard() {
     {
       name: "Refer & Earn",
       desc: "Invite friends and earn rewards",
-      route: "/refer",
+      route: "/referpage",
       icon: <FaGift className="text-yellow-500" />,
     },
     {
@@ -173,7 +173,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4 p-2 bg-gray-100 rounded-lg">
           {/* Back Button */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/home')}
             className="flex items-center text-gray-700 hover:text-gray-900"
           >
             <FaArrowLeft className="mr-2 text-xl" />
@@ -187,6 +187,9 @@ export default function Dashboard() {
             onClick={() => {
               localStorage.removeItem("userId");
               localStorage.removeItem("userName");
+              localStorage.removeItem("userMobile");
+              localStorage.removeItem("userEmail");
+              localStorage.removeItem("subscribedPlans");
               navigate("/");
             }}
             className="flex items-center text-red-600 hover:text-red-800"
@@ -205,11 +208,10 @@ export default function Dashboard() {
             <button
               key={tab.name}
               onClick={() => setActiveTab(tab.name)}
-              className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${
-                activeTab === tab.name
+              className={`flex-1 mx-1 py-2 rounded-md font-medium flex flex-col items-center justify-center gap-1 transition-colors duration-200 ${activeTab === tab.name
                   ? "bg-blue-500 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               <span className="text-sm">{tab.icon}</span>
               <span className="text-sm">{tab.name}</span>

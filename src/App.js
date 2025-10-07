@@ -42,6 +42,7 @@ import BackgroundRemover from "./Pages/BackgroundRemoval";
 import BusinessCardManager from "./Pages/BussinessCardManager";
 import ChatComponent from "./Pages/ChatPage";
 import Plans from "./Pages/Plans";
+import NewRefer from "./Pages/ReferPage";
 
 function App() {
   return (
@@ -93,6 +94,7 @@ function App() {
         <Route path="/businesscard" element={<BusinessCardManager />} />
         <Route path="/chat" element={<ChatComponent />} />
         <Route path="/plans" element={<Plans />} />
+        <Route path="/referpage" element={<NewRefer />} />
       </Routes>
     </Router>
   );

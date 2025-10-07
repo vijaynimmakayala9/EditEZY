@@ -13,7 +13,7 @@ const StoryPage = () => {
   const [seenStories, setSeenStories] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showNavigation, setShowNavigation] = useState({ left: false, right: true });
-  
+
   const storiesContainerRef = useRef(null);
   const userId = localStorage.getItem("userId");
 
@@ -55,12 +55,12 @@ const StoryPage = () => {
   const scrollStories = (direction) => {
     if (storiesContainerRef.current) {
       const scrollAmount = 300;
-      const newPosition = direction === 'left' 
+      const newPosition = direction === 'left'
         ? Math.max(0, storiesContainerRef.current.scrollLeft - scrollAmount)
         : storiesContainerRef.current.scrollLeft + scrollAmount;
-      
+
       storiesContainerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
-      
+
       // Check position after scrolling
       setTimeout(checkScrollPosition, 300);
     }
@@ -186,12 +186,12 @@ const StoryPage = () => {
             <FiChevronLeft size={20} />
           </Button>
         )}
-        
+
         <div
           ref={storiesContainerRef}
           className="d-flex align-items-center"
-          style={{ 
-            overflowX: "auto", 
+          style={{
+            overflowX: "auto",
             gap: "15px",
             scrollBehavior: "smooth",
             scrollbarWidth: "none",
@@ -274,8 +274,8 @@ const StoryPage = () => {
                   }}
                 />
                 <p className="mt-2 small text-center" style={{ width: "70px" }}>
-                  {story.user?.name && story.user.name.length > 10 
-                    ? `${story.user.name.substring(0, 10)}...` 
+                  {story.user?.name && story.user.name.length > 10
+                    ? `${story.user.name.substring(0, 10)}...`
                     : story.user?.name || "Unknown"}
                 </p>
               </div>
@@ -341,49 +341,61 @@ const StoryPage = () => {
         onHide={() => setSelectedStory(null)}
         centered
         size="lg"
+        dialogClassName="max-w-3xl"
       >
         {selectedStory && (
-          <>
-            <Modal.Header closeButton>
-              <Modal.Title>{selectedStory.caption}</Modal.Title>
-              <span className="text-muted">
-                by {selectedStory.user?.name || "Unknown"}
-              </span>
-            </Modal.Header>
+          <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 bg-gradient-to-r from-purple-500 to-indigo-600">
+              <div>
+                <h3 className="text-white font-semibold text-lg">
+                  {selectedStory.caption}
+                </h3>
+                <p className="text-purple-200 text-sm">
+                  by {selectedStory.user?.name || "Unknown"}
+                </p>
+              </div>
+              <button
+                className="text-white text-2xl font-bold hover:text-gray-200"
+                onClick={() => setSelectedStory(null)}
+              >
+                ×
+              </button>
+            </div>
 
-            <Modal.Body className="text-center">
-              {/* Images list */}
+            {/* Body */}
+            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              {/* Images */}
               {selectedStory.images?.map((img) => (
-                <div key={img} className="position-relative mb-3">
+                <div
+                  key={img}
+                  className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition"
+                >
                   <img
                     src={img}
                     alt="story"
-                    style={{ maxWidth: "100%", borderRadius: "10px" }}
+                    className="w-full object-cover rounded-lg"
                   />
                   {selectedStory.user?._id === userId && (
                     <FiTrash2
                       size={22}
                       color="red"
-                      style={{
-                        cursor: "pointer",
-                        position: "absolute",
-                        top: "10px",
-                        right: "10px",
-                      }}
-                      onClick={() =>
-                        handleDeleteStory(selectedStory._id, img)
-                      }
+                      className="absolute top-3 right-3 cursor-pointer hover:scale-110 transition-transform"
+                      onClick={() => handleDeleteStory(selectedStory._id, img)}
                     />
                   )}
                 </div>
               ))}
 
-              {/* Videos list */}
+              {/* Videos */}
               {selectedStory.videos?.map((vid) => (
-                <div key={vid} className="position-relative mb-3">
+                <div
+                  key={vid}
+                  className="relative rounded-lg overflow-hidden shadow-md hover:shadow-lg transition"
+                >
                   <video
                     controls
-                    style={{ maxWidth: "100%", borderRadius: "10px" }}
+                    className="w-full rounded-lg"
                   >
                     <source src={vid} type="video/mp4" />
                   </video>
@@ -391,32 +403,28 @@ const StoryPage = () => {
                     <FiTrash2
                       size={22}
                       color="red"
-                      style={{
-                        cursor: "pointer",
-                        position: "absolute",
-                        top: "10px",
-                        right: "10px",
-                      }}
-                      onClick={() =>
-                        handleDeleteStory(selectedStory._id, vid)
-                      }
+                      className="absolute top-3 right-3 cursor-pointer hover:scale-110 transition-transform"
+                      onClick={() => handleDeleteStory(selectedStory._id, vid)}
                     />
                   )}
                 </div>
               ))}
-            </Modal.Body>
+            </div>
 
-            <Modal.Footer>
+            {/* Footer */}
+            <div className="flex justify-end px-6 py-4 border-t border-gray-200 bg-gray-50">
               <Button
-                variant="secondary"
+                variant="purple"
+                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                 onClick={() => setSelectedStory(null)}
               >
                 Close
               </Button>
-            </Modal.Footer>
-          </>
+            </div>
+          </div>
         )}
       </Modal>
+
     </div>
   );
 };
