@@ -95,7 +95,7 @@ const LoginPage = () => {
 
   try {
     // Step 1: Get all users from your backend
-    const userResponse = await axios.get("http://194.164.148.244:4061/api/admin/getallusers");
+    const userResponse = await axios.get("https://api.editezy.com/api/admin/getallusers");
 
     if (userResponse.status === 200 && Array.isArray(userResponse.data.users)) {
       const users = userResponse.data.users;
