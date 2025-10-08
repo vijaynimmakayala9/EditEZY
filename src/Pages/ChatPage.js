@@ -65,7 +65,7 @@ const ChatComponent = ({ onBack }) => {
       const assistantMessage = responseData.candidates[0].content.parts[0].text;
 
       return {
-        sender: "Allude! Assistant",
+        sender: "chicha",
         message: assistantMessage,
       };
     } catch (error) {
@@ -113,7 +113,7 @@ const ChatComponent = ({ onBack }) => {
         >
           <FaArrowLeft className="text-lg sm:text-xl" />
         </button>
-        <h4 className="text-lg sm:text-xl font-semibold flex-1">AI Chat</h4>
+        <h4 className="text-lg sm:text-xl font-semibold flex-1">Chicha</h4>
         {isTyping && (
           <div className="flex items-center">
             <div className="flex space-x-1">
@@ -131,7 +131,7 @@ const ChatComponent = ({ onBack }) => {
         <div className="space-y-3 sm:space-y-4">
           {chatMessages.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
-              <p>Ask anything to EDITEZY! Assistant</p>
+              <p>Ask anything to chicha! Assistant</p>
               <p className="text-sm mt-2">Ask anything about our products or services</p>
             </div>
           ) : (

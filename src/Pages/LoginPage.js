@@ -84,40 +84,55 @@ const LoginPage = () => {
   const handleDismissPrompt = () => setShowInstallPrompt(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!mobile) {
-      setError("Please enter your mobile number.");
-      return;
-    }
+  if (!mobile) {
+    setError("Please enter your mobile number.");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const response = await axios.post("https://api.editezy.com/api/users/login", { mobile });
+  try {
+    // Step 1: Get all users from your backend
+    const userResponse = await axios.get("http://194.164.148.244:4061/api/admin/getallusers");
 
-      if (response.status === 200) {
-        const { user } = response.data;
-        const { name, email, mobile, subscribedPlans } = user;
+    if (userResponse.status === 200 && Array.isArray(userResponse.data.users)) {
+      const users = userResponse.data.users;
 
-        
-        localStorage.setItem("userName", name);
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("userMobile", mobile);
-        localStorage.setItem("subscribedPlans", JSON.stringify(subscribedPlans || []));
-        console.log("subscribedPlans", subscribedPlans, );
-        console.log("Name", name, );
-        console.log("mobile", mobile, );
+      // Step 2: Check if the entered mobile exists in DB
+      const existingUser = users.find((user) => user.mobile === mobile);
 
+      if (existingUser) {
+        // Step 3: Store user info in localStorage
+        localStorage.setItem("userName", existingUser.name || "");
+        localStorage.setItem("userEmail", existingUser.email || "");
+        localStorage.setItem("userMobile", existingUser.mobile || "");
+        localStorage.setItem("userImage", existingUser.profileImage || "");
 
-        navigate("/verify-otp");
+        // Step 4 (Optional): Try sending OTP
+        try {
+          await axios.post("https://api.editezy.com/api/users/login", { mobile });
+          console.log("OTP sent successfully to:", mobile);
+          navigate("/verify-otp");
+        } catch (otpError) {
+          console.warn("OTP sending failed:", otpError);
+          navigate("/verify-otp");
+        }
+      } else {
+        console.log("New user detected. Redirecting to register...");
+        navigate("/register");
       }
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed.");
-    } finally {
-      setLoading(false);
+    } else {
+      setError("Unable to fetch users. Please try again.");
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    setError(err.response?.data?.message || "Login failed.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const iOSInstallInstructions = () => (
     <div className="mt-4 text-left text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">

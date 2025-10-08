@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const VerifyOtpPage = () => {
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState("1234");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -33,9 +33,9 @@ const VerifyOtpPage = () => {
         localStorage.setItem("userId", _id);
         localStorage.setItem("userName", name);
         localStorage.setItem("userMobile", mobile);
-        console.log("userId", _id, );
-        console.log("Name", name, );
-        console.log("mobile", mobile, );
+        console.log("userId", _id,);
+        console.log("Name", name,);
+        console.log("mobile", mobile,);
 
         navigate("/home");
       }
@@ -48,7 +48,7 @@ const VerifyOtpPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl flex flex-col md:flex-row overflow-hidden">
-        
+
         {/* Left Side Image / Illustration */}
         <div className="hidden md:flex md:w-1/2 bg-indigo-600 items-center justify-center p-8">
           <div className="text-white text-center">
@@ -72,6 +72,11 @@ const VerifyOtpPage = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Display OTP Info */}
+            <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-3 rounded-lg text-sm">
+              <strong>Your OTP is:</strong> <span className="font-semibold">1234</span>
+            </div>
+
             <div>
               <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
                 OTP
@@ -120,7 +125,7 @@ const VerifyOtpPage = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-600">
-            Didn't receive OTP?{" "}
+            {/* Didn't receive OTP?{" "} */}
             <button
               type="button"
               className="text-indigo-600 font-medium hover:text-indigo-500"

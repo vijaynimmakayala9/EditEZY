@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from "react";
-
 // Mock Navbar component
 const Navbar = () => (
     <nav className="bg-white shadow-sm border-b px-4 py-3">
@@ -8,7 +7,6 @@ const Navbar = () => (
         </div>
     </nav>
 );
-
 const PRESET_SIZES = [
     { w: 2400, h: 2400, label: "2400×2400" },
     { w: 750, h: 1334, label: "750×1334" },
@@ -19,7 +17,6 @@ const PRESET_SIZES = [
     { w: 2480, h: 3507, label: "2480×3507" },
     { w: 850, h: 1100, label: "850×1100" },
 ];
-
 const FONT_OPTIONS = [
     "Arial",
     "Verdana",
@@ -35,7 +32,6 @@ const FONT_OPTIONS = [
     "Tahoma",
     "Trebuchet MS",
 ];
-
 const LOGO_SHAPES = [
     { value: "rectangle", label: "Rectangle" },
     { value: "circle", label: "Circle" },
@@ -80,6 +76,8 @@ function CustomPosterEditor() {
     const [isDownloading, setIsDownloading] = useState(false);
 
     const userId = localStorage.getItem("userId");
+    const userMobile = localStorage.getItem("userMobile");
+    const userEmail = localStorage.getItem("userEmail");
 
     // Load user profile from API
     useEffect(() => {
@@ -88,7 +86,6 @@ function CustomPosterEditor() {
                 const response = await fetch(`https://api.editezy.com/api/users/get-profile/${userId}`);
                 const data = await response.json();
                 setUserProfile(data);
-
                 // Load profile image automatically
                 if (data.profileImage) {
                     const img = new Image();
@@ -110,9 +107,8 @@ function CustomPosterEditor() {
                 setProfileLoading(false);
             }
         };
-
-        fetchUserProfile();
-    }, []);
+        if (userId) fetchUserProfile();
+    }, [userId]);
 
     // Handle responsiveness
     useEffect(() => {
@@ -142,10 +138,8 @@ function CustomPosterEditor() {
     const drawMultilineText = (ctx, text, x, y, font, size, color, bold, italic, maxWidth) => {
         ctx.font = `${bold ? "bold" : ""} ${italic ? "italic" : ""} ${size}px ${font}`;
         ctx.fillStyle = color;
-
         const lines = text.split('\n');
         const lineHeight = size * 1.2;
-
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (maxWidth && ctx.measureText(line).width > maxWidth) {
@@ -153,11 +147,9 @@ function CustomPosterEditor() {
                 const words = line.split(' ');
                 let currentLine = '';
                 let lineY = y + (i * lineHeight);
-
                 for (let j = 0; j < words.length; j++) {
                     const testLine = currentLine + words[j] + ' ';
                     const testWidth = ctx.measureText(testLine).width;
-
                     if (testWidth > maxWidth && j > 0) {
                         ctx.fillText(currentLine, x, lineY);
                         currentLine = words[j] + ' ';
@@ -171,7 +163,6 @@ function CustomPosterEditor() {
                 ctx.fillText(line, x, y + (i * lineHeight));
             }
         }
-
         return lines.length * lineHeight;
     };
 
@@ -181,12 +172,10 @@ function CustomPosterEditor() {
         const lines = text.split('\n');
         let maxWidth = 0;
         const lineHeight = size * 1.2;
-
         lines.forEach(line => {
             const width = ctx.measureText(line).width;
             if (width > maxWidth) maxWidth = width;
         });
-
         return {
             width: maxWidth,
             height: lines.length * lineHeight,
@@ -195,75 +184,39 @@ function CustomPosterEditor() {
     };
 
     useEffect(() => {
-    if (!selectedSize) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    canvas.width = selectedSize.w;
-    canvas.height = selectedSize.h;
-
-    // background fill
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // background poster image
-    if (backgroundImg) {
-        const { iw, ih, img } = backgroundImg;
-        const { w: cw, h: ch } = selectedSize;
-        const scale = Math.min(cw / iw, ch / ih);
-        const nw = iw * scale;
-        const nh = ih * scale;
-        const x = (cw - nw) / 2;
-        const y = (ch - nh) / 2;
-        ctx.drawImage(img, x, y, nw, nh);
-    }
-
-    // draw objects
-    objects.forEach((obj, i) => {
-        if (obj.type === "text" && !(i === activeIndex && isEditingText)) {
-            drawMultilineText(ctx, obj.text, obj.x, obj.y, obj.font, obj.size, obj.color, obj.bold, obj.italic);
+        if (!selectedSize) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        canvas.width = selectedSize.w;
+        canvas.height = selectedSize.h;
+        // background fill
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // background poster image
+        if (backgroundImg) {
+            const { iw, ih, img } = backgroundImg;
+            const { w: cw, h: ch } = selectedSize;
+            const scale = Math.min(cw / iw, ch / ih);
+            const nw = iw * scale;
+            const nh = ih * scale;
+            const x = (cw - nw) / 2;
+            const y = (ch - nh) / 2;
+            ctx.drawImage(img, x, y, nw, nh);
         }
-        if (obj.type === "image" && obj.img) {
-            // Save current context
-            ctx.save();
-            // Apply shape transformations
-            if (obj.shape === "circle") {
-                ctx.beginPath();
-                ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
-            } else if (obj.shape === "rounded") {
-                const radius = 20;
-                ctx.beginPath();
-                ctx.moveTo(obj.x + radius, obj.y);
-                ctx.lineTo(obj.x + obj.width - radius, obj.y);
-                ctx.quadraticCurveTo(obj.x + obj.width, obj.y, obj.x + obj.width, obj.y + radius);
-                ctx.lineTo(obj.x + obj.width, obj.y + obj.height - radius);
-                ctx.quadraticCurveTo(obj.x + obj.width, obj.y + obj.height, obj.x + obj.width - radius, obj.y + obj.height);
-                ctx.lineTo(obj.x + radius, obj.y + obj.height);
-                ctx.quadraticCurveTo(obj.x, obj.y + obj.height, obj.x, obj.y + obj.height - radius);
-                ctx.lineTo(obj.x, obj.y + radius);
-                ctx.quadraticCurveTo(obj.x, obj.y, obj.x + radius, obj.y);
-                ctx.closePath();
-                ctx.clip();
-            } else if (obj.shape === "triangle") {
-                ctx.beginPath();
-                ctx.moveTo(obj.x + obj.width / 2, obj.y);
-                ctx.lineTo(obj.x + obj.width, obj.y + obj.height);
-                ctx.lineTo(obj.x, obj.y + obj.height);
-                ctx.closePath();
-                ctx.clip();
+        // draw objects
+        objects.forEach((obj, i) => {
+            if (obj.type === "text" && !(i === activeIndex && isEditingText)) {
+                drawMultilineText(ctx, obj.text, obj.x, obj.y, obj.font, obj.size, obj.color, obj.bold, obj.italic);
             }
-            ctx.drawImage(obj.img, obj.x, obj.y, obj.width, obj.height);
-            // Restore context for the selection border
-            ctx.restore();
-            // Draw selection indicators for active image - ONLY when not downloading
-            if (i === activeIndex && !isDownloading) {
-                ctx.strokeStyle = "#3b82f6";
-                ctx.lineWidth = 2;
+            if (obj.type === "image" && obj.img) {
+                // Save current context
+                ctx.save();
+                // Apply shape transformations
                 if (obj.shape === "circle") {
                     ctx.beginPath();
                     ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, Math.PI * 2);
-                    ctx.stroke();
+                    ctx.closePath();
+                    ctx.clip();
                 } else if (obj.shape === "rounded") {
                     const radius = 20;
                     ctx.beginPath();
@@ -277,77 +230,76 @@ function CustomPosterEditor() {
                     ctx.lineTo(obj.x, obj.y + radius);
                     ctx.quadraticCurveTo(obj.x, obj.y, obj.x + radius, obj.y);
                     ctx.closePath();
-                    ctx.stroke();
+                    ctx.clip();
                 } else if (obj.shape === "triangle") {
                     ctx.beginPath();
                     ctx.moveTo(obj.x + obj.width / 2, obj.y);
                     ctx.lineTo(obj.x + obj.width, obj.y + obj.height);
                     ctx.lineTo(obj.x, obj.y + obj.height);
                     ctx.closePath();
-                    ctx.stroke();
-                } else {
-                    ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+                    ctx.clip();
                 }
-                // Draw resize handles
-                const handleSize = 8;
-                ctx.fillStyle = "#3b82f6";
-                // Corner handles
-                const handles = [
-                    { x: obj.x - handleSize / 2, y: obj.y - handleSize / 2 },
-                    { x: obj.x + obj.width - handleSize / 2, y: obj.y - handleSize / 2 },
-                    { x: obj.x - handleSize / 2, y: obj.y + obj.height - handleSize / 2 },
-                    { x: obj.x + obj.width - handleSize / 2, y: obj.y + obj.height - handleSize / 2 }
-                ];
-                handles.forEach(handle => {
-                    ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
-                });
+                ctx.drawImage(obj.img, obj.x, obj.y, obj.width, obj.height);
+                // Restore context for the selection border
+                ctx.restore();
+                // Draw selection indicators for active image - ONLY when not downloading
+                if (i === activeIndex && !isDownloading) {
+                    ctx.strokeStyle = "#3b82f6";
+                    ctx.lineWidth = 2;
+                    if (obj.shape === "circle") {
+                        ctx.beginPath();
+                        ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, Math.PI * 2);
+                        ctx.stroke();
+                    } else if (obj.shape === "rounded") {
+                        const radius = 20;
+                        ctx.beginPath();
+                        ctx.moveTo(obj.x + radius, obj.y);
+                        ctx.lineTo(obj.x + obj.width - radius, obj.y);
+                        ctx.quadraticCurveTo(obj.x + obj.width, obj.y, obj.x + obj.width, obj.y + radius);
+                        ctx.lineTo(obj.x + obj.width, obj.y + obj.height - radius);
+                        ctx.quadraticCurveTo(obj.x + obj.width, obj.y + obj.height, obj.x + obj.width - radius, obj.y + obj.height);
+                        ctx.lineTo(obj.x + radius, obj.y + obj.height);
+                        ctx.quadraticCurveTo(obj.x, obj.y + obj.height, obj.x, obj.y + obj.height - radius);
+                        ctx.lineTo(obj.x, obj.y + radius);
+                        ctx.quadraticCurveTo(obj.x, obj.y, obj.x + radius, obj.y);
+                        ctx.closePath();
+                        ctx.stroke();
+                    } else if (obj.shape === "triangle") {
+                        ctx.beginPath();
+                        ctx.moveTo(obj.x + obj.width / 2, obj.y);
+                        ctx.lineTo(obj.x + obj.width, obj.y + obj.height);
+                        ctx.lineTo(obj.x, obj.y + obj.height);
+                        ctx.closePath();
+                        ctx.stroke();
+                    } else {
+                        ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+                    }
+                    // Draw resize handles
+                    const handleSize = 8;
+                    ctx.fillStyle = "#3b82f6";
+                    // Corner handles
+                    const handles = [
+                        { x: obj.x - handleSize / 2, y: obj.y - handleSize / 2 },
+                        { x: obj.x + obj.width - handleSize / 2, y: obj.y - handleSize / 2 },
+                        { x: obj.x - handleSize / 2, y: obj.y + obj.height - handleSize / 2 },
+                        { x: obj.x + obj.width - handleSize / 2, y: obj.y + obj.height - handleSize / 2 }
+                    ];
+                    handles.forEach(handle => {
+                        ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
+                    });
+                }
             }
-        }
-    });
-
-    // Draw profile logo if visible
-    if (profileLogo && profileLogoSettings.visible) {
-        const { x, y, width, height, shape } = profileLogoSettings;
-        ctx.save();
-        // Apply shape clipping
-        if (shape === "circle") {
-            ctx.beginPath();
-            ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.clip();
-        } else if (shape === "rounded") {
-            const radius = 20;
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + width - radius, y);
-            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-            ctx.lineTo(x + width, y + height - radius);
-            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-            ctx.lineTo(x + radius, y + height);
-            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-            ctx.lineTo(x, y + radius);
-            ctx.quadraticCurveTo(x, y, x + radius, y);
-            ctx.closePath();
-            ctx.clip();
-        } else if (shape === "triangle") {
-            ctx.beginPath();
-            ctx.moveTo(x + width / 2, y);
-            ctx.lineTo(x + width, y + height);
-            ctx.lineTo(x, y + height);
-            ctx.closePath();
-            ctx.clip();
-        }
-        ctx.drawImage(profileLogo, x, y, width, height);
-        ctx.restore();
-
-        // Draw selection border and resize handles if profile logo is active - ONLY when not downloading
-        if (activeIndex === 'profile' && !isDownloading) {
-            ctx.strokeStyle = "#3b82f6";
-            ctx.lineWidth = 2;
+        });
+        // Draw profile logo if visible
+        if (profileLogo && profileLogoSettings.visible) {
+            const { x, y, width, height, shape } = profileLogoSettings;
+            ctx.save();
+            // Apply shape clipping
             if (shape === "circle") {
                 ctx.beginPath();
                 ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.closePath();
+                ctx.clip();
             } else if (shape === "rounded") {
                 const radius = 20;
                 ctx.beginPath();
@@ -361,53 +313,83 @@ function CustomPosterEditor() {
                 ctx.lineTo(x, y + radius);
                 ctx.quadraticCurveTo(x, y, x + radius, y);
                 ctx.closePath();
-                ctx.stroke();
+                ctx.clip();
             } else if (shape === "triangle") {
                 ctx.beginPath();
                 ctx.moveTo(x + width / 2, y);
                 ctx.lineTo(x + width, y + height);
                 ctx.lineTo(x, y + height);
                 ctx.closePath();
-                ctx.stroke();
-            } else {
-                ctx.strokeRect(x, y, width, height);
+                ctx.clip();
             }
-            // Draw resize handles
-            const handleSize = 8;
-            ctx.fillStyle = "#3b82f6";
-            const handles = [
-                { x: x - handleSize / 2, y: y - handleSize / 2 },
-                { x: x + width - handleSize / 2, y: y - handleSize / 2 },
-                { x: x - handleSize / 2, y: y + height - handleSize / 2 },
-                { x: x + width - handleSize / 2, y: y + height - handleSize / 2 }
-            ];
-            handles.forEach(handle => {
-                ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
-            });
+            ctx.drawImage(profileLogo, x, y, width, height);
+            ctx.restore();
+            // Draw selection border and resize handles if profile logo is active - ONLY when not downloading
+            if (activeIndex === 'profile' && !isDownloading) {
+                ctx.strokeStyle = "#3b82f6";
+                ctx.lineWidth = 2;
+                if (shape === "circle") {
+                    ctx.beginPath();
+                    ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (shape === "rounded") {
+                    const radius = 20;
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.lineTo(x + width - radius, y);
+                    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                    ctx.lineTo(x + width, y + height - radius);
+                    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                    ctx.lineTo(x + radius, y + height);
+                    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                    ctx.lineTo(x, y + radius);
+                    ctx.quadraticCurveTo(x, y, x + radius, y);
+                    ctx.closePath();
+                    ctx.stroke();
+                } else if (shape === "triangle") {
+                    ctx.beginPath();
+                    ctx.moveTo(x + width / 2, y);
+                    ctx.lineTo(x + width, y + height);
+                    ctx.lineTo(x, y + height);
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.strokeRect(x, y, width, height);
+                }
+                // Draw resize handles
+                const handleSize = 8;
+                ctx.fillStyle = "#3b82f6";
+                const handles = [
+                    { x: x - handleSize / 2, y: y - handleSize / 2 },
+                    { x: x + width - handleSize / 2, y: y - handleSize / 2 },
+                    { x: x - handleSize / 2, y: y + height - handleSize / 2 },
+                    { x: x + width - handleSize / 2, y: y + height - handleSize / 2 }
+                ];
+                handles.forEach(handle => {
+                    ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
+                });
+            }
         }
-    }
-
-    // Draw text selection border (only when selected but not editing) - ONLY when not downloading
-    if (activeIndex !== null && objects[activeIndex] && objects[activeIndex].type === "text" && !isEditingText && !isDownloading) {
-        const obj = objects[activeIndex];
-        const dimensions = getTextDimensions(ctx, obj.text, obj.font, obj.size, obj.bold, obj.italic);
-        const width = dimensions.width;
-        const height = dimensions.height;
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(obj.x - 2, obj.y - obj.size - 2, width + 4, height + 4);
-
-        // Draw resize handles for text
-        const handleSize = 8;
-        ctx.fillStyle = "#ef4444";
-        const textBottom = obj.y + height - obj.size;
-        const textTop = obj.y - obj.size;
-        ctx.fillRect(obj.x - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-left
-        ctx.fillRect(obj.x + width - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-right
-        ctx.fillRect(obj.x - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-left
-        ctx.fillRect(obj.x + width - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-right
-    }
-}, [selectedSize, bgColor, objects, backgroundImg, activeIndex, isEditingText, profileLogo, profileLogoSettings, isDownloading]); // Added isDownloading to dependencies
+        // Draw text selection border (only when selected but not editing) - ONLY when not downloading
+        if (activeIndex !== null && objects[activeIndex] && objects[activeIndex].type === "text" && !isEditingText && !isDownloading) {
+            const obj = objects[activeIndex];
+            const dimensions = getTextDimensions(ctx, obj.text, obj.font, obj.size, obj.bold, obj.italic);
+            const width = dimensions.width;
+            const height = dimensions.height;
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(obj.x - 2, obj.y - obj.size - 2, width + 4, height + 4);
+            // Draw resize handles for text
+            const handleSize = 8;
+            ctx.fillStyle = "#ef4444";
+            const textBottom = obj.y + height - obj.size;
+            const textTop = obj.y - obj.size;
+            ctx.fillRect(obj.x - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-left
+            ctx.fillRect(obj.x + width - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-right
+            ctx.fillRect(obj.x - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-left
+            ctx.fillRect(obj.x + width - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-right
+        }
+    }, [selectedSize, bgColor, objects, backgroundImg, activeIndex, isEditingText, profileLogo, profileLogoSettings, isDownloading]);
 
     // Update text input when active object changes
     useEffect(() => {
@@ -443,7 +425,6 @@ function CustomPosterEditor() {
         const textTop = obj.y - obj.size;
         const textBottom = obj.y + height - obj.size;
         const handleSize = 8;
-
         // Define handle positions
         const handles = [
             { x: obj.x - handleSize / 2, y: textTop - handleSize / 2, type: 'nw' },
@@ -451,7 +432,6 @@ function CustomPosterEditor() {
             { x: obj.x - handleSize / 2, y: textBottom - handleSize / 2, type: 'sw' },
             { x: obj.x + width - handleSize / 2, y: textBottom - handleSize / 2, type: 'se' }
         ];
-
         for (let handle of handles) {
             if (x >= handle.x && x <= handle.x + handleSize && y >= handle.y && y <= handle.y + handleSize) {
                 return handle.type;
@@ -482,7 +462,6 @@ function CustomPosterEditor() {
     const isClickOnProfileLogo = (x, y) => {
         if (!profileLogoSettings.visible) return false;
         const { x: px, y: py, width, height, shape } = profileLogoSettings;
-
         if (shape === "circle") {
             const centerX = px + width / 2;
             const centerY = py + height / 2;
@@ -512,7 +491,6 @@ function CustomPosterEditor() {
         if (!selectedSize || isEditingText) return;
         e.preventDefault();
         const { x, y } = getEventPosition(e);
-
         // Check for profile logo first
         if (profileLogo && profileLogoSettings.visible) {
             const resizeHandle = getProfileResizeHandle(x, y);
@@ -528,7 +506,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-
         // Check for resize handles on text objects
         if (activeIndex !== null && typeof activeIndex === 'number' && objects[activeIndex] && objects[activeIndex].type === "text") {
             const resizeHandle = getTextResizeHandle(x, y, objects[activeIndex]);
@@ -537,7 +514,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-
         // Check for resize handles on image objects
         if (activeIndex !== null && typeof activeIndex === 'number' && objects[activeIndex] && objects[activeIndex].type === "image") {
             const resizeHandle = getResizeHandle(x, y, objects[activeIndex]);
@@ -546,7 +522,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-
         // Check for object selection
         for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
@@ -624,14 +599,12 @@ function CustomPosterEditor() {
         if (!dragging && !resizing && !isResizingProfile) return;
         e.preventDefault();
         const { x, y } = getEventPosition(e);
-
         if (isResizingProfile && profileLogo) {
             const { x: px, y: py, width, height } = profileLogoSettings;
             let newWidth = width;
             let newHeight = height;
             let newX = px;
             let newY = py;
-
             switch (profileResizeHandle) {
                 case 'se':
                     newWidth = Math.max(20, x - px);
@@ -668,7 +641,6 @@ function CustomPosterEditor() {
                 let newHeight = obj.height;
                 let newX = obj.x;
                 let newY = obj.y;
-
                 switch (resizing) {
                     case 'se':
                         newWidth = Math.max(20, x - obj.x);
@@ -705,7 +677,6 @@ function CustomPosterEditor() {
                 let newSize = obj.size;
                 let newX = obj.x;
                 let newY = obj.y;
-
                 switch (resizing) {
                     case 'se':
                         newSize = Math.max(10, obj.size + (y - obj.y) / 5);
@@ -720,7 +691,6 @@ function CustomPosterEditor() {
                         newSize = Math.max(10, obj.size - (y - obj.y) / 5);
                         break;
                 }
-
                 setObjects((prev) =>
                     prev.map((o, i) =>
                         i === activeIndex
@@ -762,13 +732,11 @@ function CustomPosterEditor() {
     const handleDoubleClick = (e) => {
         if (!selectedSize) return;
         const { x, y } = getEventPosition(e);
-
         // Check if double-clicked on profile logo
         if (profileLogo && profileLogoSettings.visible && isClickOnProfileLogo(x, y)) {
             // Don't edit profile logo on double-click
             return;
         }
-
         // Check for text objects
         for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
@@ -800,19 +768,16 @@ function CustomPosterEditor() {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-
         // Mouse events
         canvas.addEventListener("mousedown", handleStart);
         canvas.addEventListener("mousemove", handleMove);
         canvas.addEventListener("mouseup", handleEnd);
         canvas.addEventListener("mouseleave", handleEnd);
         canvas.addEventListener("dblclick", handleDoubleClick);
-
         // Touch events
         canvas.addEventListener("touchstart", handleStart);
         canvas.addEventListener("touchmove", handleMove);
         canvas.addEventListener("touchend", handleEnd);
-
         return () => {
             canvas.removeEventListener("mousedown", handleStart);
             canvas.removeEventListener("mousemove", handleMove);
@@ -948,41 +913,73 @@ function CustomPosterEditor() {
     const handleSizeSelect = (s) => {
         setSelectedSize(s);
         setShowEditor(true);
-        // Set initial profile logo position to top right
+
+        // Create initial objects including user info
+        const initialObjects = [];
+
+        // Profile logo position
         setProfileLogoSettings(prev => ({
             ...prev,
             x: s.w - 120,
             y: 20
         }));
+
+        // Add mobile number at bottom right
+        if (userMobile) {
+            initialObjects.push({
+                type: "text",
+                text: userMobile,
+                x: s.w - 300, // adjust as needed
+                y: s.h - 50,
+                size: 36,
+                color: "#333333",
+                font: "Arial",
+                bold: false,
+                italic: false,
+            });
+        }
+
+        // Add email at bottom left
+        if (userEmail) {
+            initialObjects.push({
+                type: "text",
+                text: userEmail,
+                x: 50,
+                y: s.h - 50,
+                size: 36,
+                color: "#333333",
+                font: "Arial",
+                bold: false,
+                italic: false,
+            });
+        }
+
+        setObjects(initialObjects);
     };
 
     // Download poster
     const handleDownload = (format = 'png') => {
-    setIsDownloading(true);
-    
-    // Use setTimeout to ensure the canvas redraws without selection indicators
-    setTimeout(() => {
-        const canvas = canvasRef.current;
-        const link = document.createElement('a');
-        link.className = 'no-outline';
-        link.style.outline = 'none';
-        
-        if (format === 'png') {
-            link.href = canvas.toDataURL('image/png');
-            link.download = 'poster.png';
-        } else if (format === 'jpeg') {
-            link.href = canvas.toDataURL('image/jpeg', 0.9);
-            link.download = 'poster.jpg';
-        }
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setIsDownloading(false);
-        setShowDownloadOptions(false);
-    }, 100);
-};
+        setIsDownloading(true);
+        // Use setTimeout to ensure the canvas redraws without selection indicators
+        setTimeout(() => {
+            const canvas = canvasRef.current;
+            const link = document.createElement('a');
+            link.className = 'no-outline';
+            link.style.outline = 'none';
+            if (format === 'png') {
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'poster.png';
+            } else if (format === 'jpeg') {
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.download = 'poster.jpg';
+            }
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setIsDownloading(false);
+            setShowDownloadOptions(false);
+        }, 100);
+    };
 
     // Share poster
     const handleShare = async () => {
@@ -1060,13 +1057,11 @@ function CustomPosterEditor() {
                             </div>
                         )}
                     </div>
-
                     {profileLoading && (
                         <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
                             Loading your profile...
                         </div>
                     )}
-
                     {/* Size Grid */}
                     {!showEditor && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -1081,13 +1076,11 @@ function CustomPosterEditor() {
                             ))}
                         </div>
                     )}
-
                     {/* Editor */}
                     {showEditor && selectedSize && (
                         <div className="mt-6 flex flex-col lg:flex-row gap-4 sm:gap-6">
                             {/* Left: Canvas with poster upload */}
                             <div className="flex-1 bg-white p-3 sm:p-4 rounded-lg shadow relative">
-
                                 {/* 🔹 Size Adjuster at the top of canvas */}
                                 {(activeIndex !== null || activeIndex === 'profile') && (
                                     <div className="mb-4 p-2 bg-gray-100 rounded flex items-center gap-3">
@@ -1124,7 +1117,6 @@ function CustomPosterEditor() {
                                         </span>
                                     </div>
                                 )}
-
                                 {/* Canvas & Uploads */}
                                 <div className="mb-3">
                                     <label className="block text-sm mb-1 font-medium text-gray-700">Upload Poster (Background)</label>
@@ -1135,7 +1127,6 @@ function CustomPosterEditor() {
                                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
                                     />
                                 </div>
-
                                 <div className="border mt-3 rounded overflow-hidden inline-block max-w-full relative">
                                     <canvas
                                         ref={canvasRef}
@@ -1176,7 +1167,6 @@ function CustomPosterEditor() {
                                         />
                                     )}
                                 </div>
-
                                 {/* Download & Share Buttons */}
                                 <div className="mt-4 flex flex-wrap gap-3">
                                     <div className="relative w-full sm:w-auto">
@@ -1209,11 +1199,9 @@ function CustomPosterEditor() {
                                     </button>
                                 </div>
                             </div>
-
                             {/* Right: Tools */}
                             <div className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-lg shadow">
                                 <h2 className="text-lg font-semibold mb-3 text-gray-800">Edit Tools</h2>
-
                                 {/* Background Color */}
                                 <div className="mb-4">
                                     <label className="block text-sm mb-1 font-medium text-gray-700">Background Color</label>
@@ -1227,7 +1215,6 @@ function CustomPosterEditor() {
                                         <span className="ml-2 text-sm text-gray-600">{bgColor}</span>
                                     </div>
                                 </div>
-
                                 {/* Add Buttons */}
                                 <div className="mb-4">
                                     <button
@@ -1237,7 +1224,6 @@ function CustomPosterEditor() {
                                         Add Text
                                     </button>
                                 </div>
-
                                 <div className="mb-4">
                                     <label className="block text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
                                     <select
@@ -1250,7 +1236,6 @@ function CustomPosterEditor() {
                                         ))}
                                     </select>
                                 </div>
-
                                 <div className="mb-4">
                                     <label className="block text-sm mb-1 font-medium text-gray-700">Add Logo</label>
                                     <input
@@ -1260,7 +1245,6 @@ function CustomPosterEditor() {
                                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
                                     />
                                 </div>
-
                                 {/* Profile Logo Settings */}
                                 {profileLogo && (
                                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
@@ -1311,7 +1295,6 @@ function CustomPosterEditor() {
                                         </button>
                                     </div>
                                 )}
-
                                 {/* Delete Selected Object */}
                                 {activeIndex !== null && (
                                     <div className="mb-4">
@@ -1332,7 +1315,6 @@ function CustomPosterEditor() {
                                         </button>
                                     </div>
                                 )}
-
                                 {/* Active Object Props */}
                                 {activeIndex !== null && (
                                     <div className="mt-4 border-t pt-3">
@@ -1477,7 +1459,6 @@ function CustomPosterEditor() {
                                         )}
                                     </div>
                                 )}
-
                                 {/* Layer Management */}
                                 {(objects.length > 0 || profileLogo) && (
                                     <div className="mt-4 border-t pt-3">
@@ -1509,7 +1490,6 @@ function CustomPosterEditor() {
                                         </div>
                                     </div>
                                 )}
-
                                 {/* Keyboard Shortcuts */}
                                 <div className="mt-4 border-t pt-3">
                                     <h3 className="text-sm font-semibold mb-2 text-gray-800">Shortcuts & Features</h3>
@@ -1520,6 +1500,7 @@ function CustomPosterEditor() {
                                         <div>• Ctrl+Enter or click outside to finish editing</div>
                                         <div>• Drag objects to move, corners to resize</div>
                                         <div>• Profile logo appears at top right by default</div>
+                                        <div>• Mobile & email auto-added from your account</div>
                                         <div>• All shapes: Circle, Rectangle, Rounded, Triangle</div>
                                     </div>
                                 </div>
@@ -1531,5 +1512,4 @@ function CustomPosterEditor() {
         </>
     );
 }
-
 export default CustomPosterEditor;
