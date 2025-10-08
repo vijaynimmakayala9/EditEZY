@@ -38,7 +38,6 @@ const LOGO_SHAPES = [
     { value: "rounded", label: "Rounded" },
     { value: "triangle", label: "Triangle" },
 ];
-
 function CustomPosterEditor() {
     const canvasRef = useRef(null);
     const textInputRef = useRef(null);
@@ -64,8 +63,8 @@ function CustomPosterEditor() {
     const [profileLogoSettings, setProfileLogoSettings] = useState({
         x: 0,
         y: 0,
-        width: 300,
-        height: 300,
+        width: 100,
+        height: 100,
         shape: "circle",
         visible: true
     });
@@ -74,22 +73,24 @@ function CustomPosterEditor() {
     const [userProfile, setUserProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
-
     const userId = localStorage.getItem("userId");
     const userMobile = localStorage.getItem("userMobile");
-    const userEmail = localStorage.getItem("userEmail");
+    const userName = localStorage.getItem("userName");
 
     // Load user profile from API
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
+                if (!userId) {
+                    setProfileLoading(false);
+                    return;
+                }
                 const response = await fetch(`https://api.editezy.com/api/users/get-profile/${userId}`);
                 const data = await response.json();
                 setUserProfile(data);
-                // Load profile image automatically
                 if (data.profileImage) {
                     const img = new Image();
-                    img.crossOrigin = 'anonymous'; // Handle CORS
+                    img.crossOrigin = 'anonymous';
                     img.onload = () => {
                         setProfileLogo(img);
                         setProfileLoading(false);
@@ -107,7 +108,7 @@ function CustomPosterEditor() {
                 setProfileLoading(false);
             }
         };
-        if (userId) fetchUserProfile();
+        fetchUserProfile();
     }, [userId]);
 
     // Handle responsiveness
@@ -119,17 +120,25 @@ function CustomPosterEditor() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Calculate canvas scale for responsive display
+    // Calculate canvas scale and set profile logo position
     useEffect(() => {
         if (selectedSize) {
             const maxDisplayWidth = isMobile ? 320 : 600;
             const scale = Math.min(maxDisplayWidth / selectedSize.w, 1);
             setCanvasScale(scale);
-            // Update profile logo position to top right corner
+
+            // Set profile logo size: max 10% of canvas or 120px
+            const logoSize = Math.min(120, Math.max(60, selectedSize.w * 0.1));
+            const padding = 20;
+            const x = selectedSize.w - logoSize - padding;
+            const y = padding;
+
             setProfileLogoSettings(prev => ({
                 ...prev,
-                x: selectedSize.w - 120,
-                y: 20
+                width: logoSize,
+                height: logoSize,
+                x: x,
+                y: y
             }));
         }
     }, [selectedSize, isMobile]);
@@ -143,7 +152,6 @@ function CustomPosterEditor() {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (maxWidth && ctx.measureText(line).width > maxWidth) {
-                // Wrap long lines
                 const words = line.split(' ');
                 let currentLine = '';
                 let lineY = y + (i * lineHeight);
@@ -209,9 +217,7 @@ function CustomPosterEditor() {
                 drawMultilineText(ctx, obj.text, obj.x, obj.y, obj.font, obj.size, obj.color, obj.bold, obj.italic);
             }
             if (obj.type === "image" && obj.img) {
-                // Save current context
                 ctx.save();
-                // Apply shape transformations
                 if (obj.shape === "circle") {
                     ctx.beginPath();
                     ctx.arc(obj.x + obj.width / 2, obj.y + obj.height / 2, obj.width / 2, 0, Math.PI * 2);
@@ -240,9 +246,7 @@ function CustomPosterEditor() {
                     ctx.clip();
                 }
                 ctx.drawImage(obj.img, obj.x, obj.y, obj.width, obj.height);
-                // Restore context for the selection border
                 ctx.restore();
-                // Draw selection indicators for active image - ONLY when not downloading
                 if (i === activeIndex && !isDownloading) {
                     ctx.strokeStyle = "#3b82f6";
                     ctx.lineWidth = 2;
@@ -274,10 +278,8 @@ function CustomPosterEditor() {
                     } else {
                         ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
                     }
-                    // Draw resize handles
                     const handleSize = 8;
                     ctx.fillStyle = "#3b82f6";
-                    // Corner handles
                     const handles = [
                         { x: obj.x - handleSize / 2, y: obj.y - handleSize / 2 },
                         { x: obj.x + obj.width - handleSize / 2, y: obj.y - handleSize / 2 },
@@ -294,14 +296,13 @@ function CustomPosterEditor() {
         if (profileLogo && profileLogoSettings.visible) {
             const { x, y, width, height, shape } = profileLogoSettings;
             ctx.save();
-            // Apply shape clipping
             if (shape === "circle") {
                 ctx.beginPath();
                 ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
                 ctx.closePath();
                 ctx.clip();
             } else if (shape === "rounded") {
-                const radius = 20;
+                const radius = Math.min(20, width / 4, height / 4);
                 ctx.beginPath();
                 ctx.moveTo(x + radius, y);
                 ctx.lineTo(x + width - radius, y);
@@ -324,7 +325,6 @@ function CustomPosterEditor() {
             }
             ctx.drawImage(profileLogo, x, y, width, height);
             ctx.restore();
-            // Draw selection border and resize handles if profile logo is active - ONLY when not downloading
             if (activeIndex === 'profile' && !isDownloading) {
                 ctx.strokeStyle = "#3b82f6";
                 ctx.lineWidth = 2;
@@ -333,7 +333,7 @@ function CustomPosterEditor() {
                     ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
                     ctx.stroke();
                 } else if (shape === "rounded") {
-                    const radius = 20;
+                    const radius = Math.min(20, width / 4, height / 4);
                     ctx.beginPath();
                     ctx.moveTo(x + radius, y);
                     ctx.lineTo(x + width - radius, y);
@@ -356,7 +356,6 @@ function CustomPosterEditor() {
                 } else {
                     ctx.strokeRect(x, y, width, height);
                 }
-                // Draw resize handles
                 const handleSize = 8;
                 ctx.fillStyle = "#3b82f6";
                 const handles = [
@@ -370,7 +369,7 @@ function CustomPosterEditor() {
                 });
             }
         }
-        // Draw text selection border (only when selected but not editing) - ONLY when not downloading
+        // Draw text selection border
         if (activeIndex !== null && objects[activeIndex] && objects[activeIndex].type === "text" && !isEditingText && !isDownloading) {
             const obj = objects[activeIndex];
             const dimensions = getTextDimensions(ctx, obj.text, obj.font, obj.size, obj.bold, obj.italic);
@@ -379,15 +378,14 @@ function CustomPosterEditor() {
             ctx.strokeStyle = "#ef4444";
             ctx.lineWidth = 2;
             ctx.strokeRect(obj.x - 2, obj.y - obj.size - 2, width + 4, height + 4);
-            // Draw resize handles for text
             const handleSize = 8;
             ctx.fillStyle = "#ef4444";
             const textBottom = obj.y + height - obj.size;
             const textTop = obj.y - obj.size;
-            ctx.fillRect(obj.x - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-left
-            ctx.fillRect(obj.x + width - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize); // top-right
-            ctx.fillRect(obj.x - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-left
-            ctx.fillRect(obj.x + width - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize); // bottom-right
+            ctx.fillRect(obj.x - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize);
+            ctx.fillRect(obj.x + width - handleSize / 2, textTop - handleSize / 2, handleSize, handleSize);
+            ctx.fillRect(obj.x - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize);
+            ctx.fillRect(obj.x + width - handleSize / 2, textBottom - handleSize / 2, handleSize, handleSize);
         }
     }, [selectedSize, bgColor, objects, backgroundImg, activeIndex, isEditingText, profileLogo, profileLogoSettings, isDownloading]);
 
@@ -425,7 +423,6 @@ function CustomPosterEditor() {
         const textTop = obj.y - obj.size;
         const textBottom = obj.y + height - obj.size;
         const handleSize = 8;
-        // Define handle positions
         const handles = [
             { x: obj.x - handleSize / 2, y: textTop - handleSize / 2, type: 'nw' },
             { x: obj.x + width - handleSize / 2, y: textTop - handleSize / 2, type: 'ne' },
@@ -491,7 +488,6 @@ function CustomPosterEditor() {
         if (!selectedSize || isEditingText) return;
         e.preventDefault();
         const { x, y } = getEventPosition(e);
-        // Check for profile logo first
         if (profileLogo && profileLogoSettings.visible) {
             const resizeHandle = getProfileResizeHandle(x, y);
             if (resizeHandle) {
@@ -506,7 +502,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-        // Check for resize handles on text objects
         if (activeIndex !== null && typeof activeIndex === 'number' && objects[activeIndex] && objects[activeIndex].type === "text") {
             const resizeHandle = getTextResizeHandle(x, y, objects[activeIndex]);
             if (resizeHandle) {
@@ -514,7 +509,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-        // Check for resize handles on image objects
         if (activeIndex !== null && typeof activeIndex === 'number' && objects[activeIndex] && objects[activeIndex].type === "image") {
             const resizeHandle = getResizeHandle(x, y, objects[activeIndex]);
             if (resizeHandle) {
@@ -522,7 +516,6 @@ function CustomPosterEditor() {
                 return;
             }
         }
-        // Check for object selection
         for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
             if (obj.type === "text") {
@@ -571,7 +564,6 @@ function CustomPosterEditor() {
                 }
             }
         }
-        // Clicked on empty space - deselect
         setActiveIndex(null);
         setIsEditingText(false);
     };
@@ -627,6 +619,9 @@ function CustomPosterEditor() {
                     newY = y;
                     break;
             }
+            // Enforce bounds
+            newX = Math.max(0, Math.min(newX, selectedSize.w - newWidth));
+            newY = Math.max(0, Math.min(newY, selectedSize.h - newHeight));
             setProfileLogoSettings({
                 ...profileLogoSettings,
                 width: newWidth,
@@ -663,6 +658,9 @@ function CustomPosterEditor() {
                         newY = y;
                         break;
                 }
+                // Enforce bounds
+                newX = Math.max(0, Math.min(newX, selectedSize.w - newWidth));
+                newY = Math.max(0, Math.min(newY, selectedSize.h - newHeight));
                 setObjects((prev) =>
                     prev.map((o, i) =>
                         i === activeIndex
@@ -671,22 +669,15 @@ function CustomPosterEditor() {
                     )
                 );
             } else if (obj.type === "text") {
-                // Handle text resizing by adjusting font size
                 const ctx = canvasRef.current.getContext("2d");
                 const dimensions = getTextDimensions(ctx, obj.text, obj.font, obj.size, obj.bold, obj.italic);
                 let newSize = obj.size;
-                let newX = obj.x;
-                let newY = obj.y;
                 switch (resizing) {
                     case 'se':
-                        newSize = Math.max(10, obj.size + (y - obj.y) / 5);
-                        break;
                     case 'sw':
                         newSize = Math.max(10, obj.size + (y - obj.y) / 5);
                         break;
                     case 'ne':
-                        newSize = Math.max(10, obj.size - (y - obj.y) / 5);
-                        break;
                     case 'nw':
                         newSize = Math.max(10, obj.size - (y - obj.y) / 5);
                         break;
@@ -694,27 +685,31 @@ function CustomPosterEditor() {
                 setObjects((prev) =>
                     prev.map((o, i) =>
                         i === activeIndex
-                            ? {
-                                ...o,
-                                size: newSize,
-                                x: newX,
-                                y: newY
-                            }
+                            ? { ...o, size: newSize }
                             : o
                     )
                 );
             }
         } else if (dragging) {
             if (activeIndex === 'profile') {
+                const newX = x - offset.x;
+                const newY = y - offset.y;
+                const boundedX = Math.max(0, Math.min(newX, selectedSize.w - profileLogoSettings.width));
+                const boundedY = Math.max(0, Math.min(newY, selectedSize.h - profileLogoSettings.height));
                 setProfileLogoSettings({
                     ...profileLogoSettings,
-                    x: x - offset.x,
-                    y: y - offset.y
+                    x: boundedX,
+                    y: boundedY
                 });
             } else if (activeIndex !== null && typeof activeIndex === 'number') {
+                const newX = x - offset.x;
+                const newY = y - offset.y;
+                const obj = objects[activeIndex];
+                const boundedX = Math.max(0, Math.min(newX, selectedSize.w - (obj.width || 0)));
+                const boundedY = Math.max(0, Math.min(newY, selectedSize.h - (obj.height || 0)));
                 setObjects((prev) =>
                     prev.map((obj, i) =>
-                        i === activeIndex ? { ...obj, x: x - offset.x, y: y - offset.y } : obj
+                        i === activeIndex ? { ...obj, x: boundedX, y: boundedY } : obj
                     )
                 );
             }
@@ -732,12 +727,9 @@ function CustomPosterEditor() {
     const handleDoubleClick = (e) => {
         if (!selectedSize) return;
         const { x, y } = getEventPosition(e);
-        // Check if double-clicked on profile logo
         if (profileLogo && profileLogoSettings.visible && isClickOnProfileLogo(x, y)) {
-            // Don't edit profile logo on double-click
             return;
         }
-        // Check for text objects
         for (let i = objects.length - 1; i >= 0; i--) {
             const obj = objects[i];
             if (obj.type === "text") {
@@ -768,13 +760,11 @@ function CustomPosterEditor() {
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        // Mouse events
         canvas.addEventListener("mousedown", handleStart);
         canvas.addEventListener("mousemove", handleMove);
         canvas.addEventListener("mouseup", handleEnd);
         canvas.addEventListener("mouseleave", handleEnd);
         canvas.addEventListener("dblclick", handleDoubleClick);
-        // Touch events
         canvas.addEventListener("touchstart", handleStart);
         canvas.addEventListener("touchmove", handleMove);
         canvas.addEventListener("touchend", handleEnd);
@@ -849,14 +839,15 @@ function CustomPosterEditor() {
         const img = new Image();
         img.onload = () => {
             setProfileLogo(img);
-            // If this is the first time setting the profile logo, position it at top right
             if (selectedSize) {
+                const logoSize = Math.min(120, Math.max(60, selectedSize.w * 0.1));
+                const padding = 20;
                 setProfileLogoSettings({
                     ...profileLogoSettings,
-                    x: selectedSize.w - 120,
-                    y: 20,
-                    width: 100,
-                    height: 100,
+                    x: selectedSize.w - logoSize - padding,
+                    y: padding,
+                    width: logoSize,
+                    height: logoSize,
                     visible: true
                 });
             }
@@ -877,7 +868,7 @@ function CustomPosterEditor() {
         }
     };
 
-    // Handle text edit (editable field)
+    // Handle text edit
     const handleTextChange = (e) => {
         const updatedText = e.target.value;
         setTextInput(updatedText);
@@ -913,23 +904,23 @@ function CustomPosterEditor() {
     const handleSizeSelect = (s) => {
         setSelectedSize(s);
         setShowEditor(true);
-
-        // Create initial objects including user info
         const initialObjects = [];
-
-        // Profile logo position
+        // Set profile logo
+        const logoSize = Math.min(120, Math.max(60, s.w * 0.1));
+        const padding = 20;
         setProfileLogoSettings(prev => ({
             ...prev,
-            x: s.w - 120,
-            y: 20
+            width: logoSize,
+            height: logoSize,
+            x: s.w - logoSize - padding,
+            y: padding
         }));
-
         // Add mobile number at bottom right
         if (userMobile) {
             initialObjects.push({
                 type: "text",
                 text: userMobile,
-                x: s.w - 300, // adjust as needed
+                x: s.w - 300,
                 y: s.h - 50,
                 size: 36,
                 color: "#333333",
@@ -938,12 +929,11 @@ function CustomPosterEditor() {
                 italic: false,
             });
         }
-
-        // Add email at bottom left
-        if (userEmail) {
+        // Add name at bottom left
+        if (userName) {
             initialObjects.push({
                 type: "text",
-                text: userEmail,
+                text: userName,
                 x: 50,
                 y: s.h - 50,
                 size: 36,
@@ -953,14 +943,12 @@ function CustomPosterEditor() {
                 italic: false,
             });
         }
-
         setObjects(initialObjects);
     };
 
     // Download poster
     const handleDownload = (format = 'png') => {
         setIsDownloading(true);
-        // Use setTimeout to ensure the canvas redraws without selection indicators
         setTimeout(() => {
             const canvas = canvasRef.current;
             const link = document.createElement('a');
@@ -1015,9 +1003,9 @@ function CustomPosterEditor() {
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-pink-50 p-4 mb-5">
+            <div className="min-h-screen bg-pink-50 p-2 sm:p-4 mb-5">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex items-center mb-4">
+                    <div className="flex items-center mb-3 sm:mb-4">
                         {showEditor && (
                             <button
                                 onClick={() => {
@@ -1028,7 +1016,7 @@ function CustomPosterEditor() {
                                     setActiveIndex(null);
                                     setIsEditingText(false);
                                 }}
-                                className="mr-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                                className="mr-3 sm:mr-4 bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm sm:text-base"
                             >
                                 ←
                             </button>
@@ -1036,15 +1024,15 @@ function CustomPosterEditor() {
                         {!showEditor && (
                             <button
                                 onClick={() => window.history.back()}
-                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-lg font-bold mr-3"
+                                className="bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-600 transition-colors font-bold mr-2 sm:mr-3 text-sm sm:text-base"
                             >
                                 ←
                             </button>
                         )}
-                        <h1 className="text-2xl font-semibold text-gray-800">Create Custom Post</h1>
+                        <h1 className="text-lg sm:text-2xl font-semibold text-gray-800">Create Custom Post</h1>
                         {userProfile && (
-                            <div className="ml-auto flex items-center bg-white rounded-lg px-3 py-2 shadow-sm">
-                                <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
+                            <div className="ml-auto flex items-center bg-white rounded-lg px-2 py-1 sm:px-3 sm:py-2 shadow-sm text-xs sm:text-sm">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden mr-1 sm:mr-2">
                                     {profileLogo && (
                                         <img
                                             src={userProfile.profileImage}
@@ -1053,42 +1041,41 @@ function CustomPosterEditor() {
                                         />
                                     )}
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{userProfile.name}</span>
+                                <span className="font-medium text-gray-700 truncate max-w-[80px] sm:max-w-none">{userProfile.name}</span>
                             </div>
                         )}
                     </div>
                     {profileLoading && (
-                        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+                        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-3 py-2 rounded mb-3 text-sm">
                             Loading your profile...
                         </div>
                     )}
                     {/* Size Grid */}
                     {!showEditor && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
                             {PRESET_SIZES.map((s) => (
                                 <button
                                     key={s.label}
                                     onClick={() => handleSizeSelect(s)}
-                                    className="bg-white rounded-2xl p-4 sm:p-6 md:p-8 shadow-md h-32 sm:h-40 flex items-center justify-center hover:shadow-lg transition-shadow"
+                                    className="bg-white rounded-xl p-2 sm:p-4 md:p-6 shadow-sm h-20 sm:h-24 md:h-32 flex items-center justify-center hover:shadow-md transition-shadow text-xs sm:text-sm"
                                 >
-                                    <span className="text-sm font-medium text-gray-700">{s.label}</span>
+                                    {s.label}
                                 </button>
                             ))}
                         </div>
                     )}
                     {/* Editor */}
                     {showEditor && selectedSize && (
-                        <div className="mt-6 flex flex-col lg:flex-row gap-4 sm:gap-6">
-                            {/* Left: Canvas with poster upload */}
-                            <div className="flex-1 bg-white p-3 sm:p-4 rounded-lg shadow relative">
-                                {/* 🔹 Size Adjuster at the top of canvas */}
+                        <div className="mt-4 sm:mt-6 flex flex-col lg:flex-row gap-3 sm:gap-6">
+                            {/* Left: Canvas */}
+                            <div className="flex-1 bg-white p-2 sm:p-4 rounded-lg shadow relative">
                                 {(activeIndex !== null || activeIndex === 'profile') && (
-                                    <div className="mb-4 p-2 bg-gray-100 rounded flex items-center gap-3">
-                                        <label className="text-sm font-medium text-gray-700">Adjust Size:</label>
+                                    <div className="mb-3 p-2 bg-gray-100 rounded flex items-center gap-2 sm:gap-3">
+                                        <label className="text-xs sm:text-sm font-medium text-gray-700">Adjust Size:</label>
                                         <input
                                             type="range"
                                             min={(activeIndex === 'profile' || (objects[activeIndex]?.type === 'image')) ? 20 : 10}
-                                            max={(activeIndex === 'profile' || (objects[activeIndex]?.type === 'image')) ? 1000 : 200}
+                                            max={(activeIndex === 'profile' || (objects[activeIndex]?.type === 'image')) ? 500 : 200}
                                             value={
                                                 activeIndex === 'profile'
                                                     ? profileLogoSettings.width
@@ -1108,7 +1095,7 @@ function CustomPosterEditor() {
                                             }}
                                             className="flex-1"
                                         />
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-xs sm:text-sm text-gray-600">
                                             {activeIndex === 'profile'
                                                 ? `${Math.round(profileLogoSettings.width)}px`
                                                 : objects[activeIndex]?.type === 'image'
@@ -1117,17 +1104,16 @@ function CustomPosterEditor() {
                                         </span>
                                     </div>
                                 )}
-                                {/* Canvas & Uploads */}
-                                <div className="mb-3">
-                                    <label className="block text-sm mb-1 font-medium text-gray-700">Upload Poster (Background)</label>
+                                <div className="mb-2 sm:mb-3">
+                                    <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Upload Poster (Background)</label>
                                     <input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleUploadPoster}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                                        className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
                                     />
                                 </div>
-                                <div className="border mt-3 rounded overflow-hidden inline-block max-w-full relative">
+                                <div className="border rounded overflow-hidden inline-block max-w-full relative">
                                     <canvas
                                         ref={canvasRef}
                                         style={{
@@ -1140,7 +1126,6 @@ function CustomPosterEditor() {
                                             touchAction: "none",
                                         }}
                                     />
-                                    {/* Inline text editing textarea */}
                                     {isEditingText && activeIndex !== null && typeof activeIndex === 'number' && objects[activeIndex] && (
                                         <textarea
                                             ref={textareaRef}
@@ -1148,7 +1133,7 @@ function CustomPosterEditor() {
                                             onChange={handleInlineTextChange}
                                             onBlur={handleInlineTextBlur}
                                             onKeyDown={handleInlineTextKeyDown}
-                                            className="absolute border-2 border-blue-500 bg-white bg-opacity-90 text-black outline-none resize-none overflow-hidden"
+                                            className="absolute border-2 border-blue-500 bg-white bg-opacity-90 text-black outline-none resize-none overflow-hidden z-10"
                                             style={{
                                                 left: editingTextPosition.x - (canvasRef.current?.getBoundingClientRect().left || 0),
                                                 top: editingTextPosition.y - (canvasRef.current?.getBoundingClientRect().top || 0),
@@ -1157,18 +1142,16 @@ function CustomPosterEditor() {
                                                 fontWeight: objects[activeIndex].bold ? 'bold' : 'normal',
                                                 fontStyle: objects[activeIndex].italic ? 'italic' : 'normal',
                                                 color: objects[activeIndex].color,
-                                                minWidth: '100px',
+                                                minWidth: '80px',
                                                 minHeight: `${objects[activeIndex].size * canvasScale}px`,
                                                 lineHeight: '1.2',
                                                 padding: '2px',
-                                                zIndex: 1000
                                             }}
                                             rows={textInput.split('\n').length || 1}
                                         />
                                     )}
                                 </div>
-                                {/* Download & Share Buttons */}
-                                <div className="mt-4 flex flex-wrap gap-3">
+                                <div className="mt-3 flex flex-wrap gap-2">
                                     <div className="relative w-full sm:w-auto">
                                         <button
                                             onClick={(e) => {
@@ -1176,16 +1159,16 @@ function CustomPosterEditor() {
                                                 setShowDownloadOptions(!showDownloadOptions);
                                                 setShowShareOptions(false);
                                             }}
-                                            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors w-full sm:w-auto"
+                                            className="bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-600 transition-colors w-full sm:w-auto text-sm"
                                         >
                                             Download
                                         </button>
                                         {showDownloadOptions && (
-                                            <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg p-2 z-10 min-w-full">
-                                                <button onClick={() => handleDownload('png')} className="block w-full text-left px-4 py-2 hover:bg-pink-50 rounded whitespace-nowrap">
+                                            <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg p-1 z-10 min-w-full">
+                                                <button onClick={() => handleDownload('png')} className="block w-full text-left px-3 py-1.5 hover:bg-pink-50 rounded text-xs">
                                                     PNG Format
                                                 </button>
-                                                <button onClick={() => handleDownload('jpeg')} className="block w-full text-left px-4 py-2 hover:bg-pink-50 rounded whitespace-nowrap">
+                                                <button onClick={() => handleDownload('jpeg')} className="block w-full text-left px-3 py-1.5 hover:bg-pink-50 rounded text-xs">
                                                     JPEG Format
                                                 </button>
                                             </div>
@@ -1193,72 +1176,69 @@ function CustomPosterEditor() {
                                     </div>
                                     <button
                                         onClick={handleShare}
-                                        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors w-full sm:w-auto"
+                                        className="bg-green-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-green-600 transition-colors w-full sm:w-auto text-sm"
                                     >
                                         Share
                                     </button>
                                 </div>
                             </div>
                             {/* Right: Tools */}
-                            <div className="w-full lg:w-80 bg-white p-3 sm:p-4 rounded-lg shadow">
-                                <h2 className="text-lg font-semibold mb-3 text-gray-800">Edit Tools</h2>
-                                {/* Background Color */}
-                                <div className="mb-4">
-                                    <label className="block text-sm mb-1 font-medium text-gray-700">Background Color</label>
+                            <div className="w-full lg:w-80 bg-white p-2 sm:p-4 rounded-lg shadow">
+                                <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 text-gray-800">Edit Tools</h2>
+                                <div className="mb-3">
+                                    <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Background Color</label>
                                     <div className="flex items-center">
                                         <input
                                             type="color"
                                             value={bgColor}
                                             onChange={(e) => setBgColor(e.target.value)}
-                                            className="w-10 h-10 rounded cursor-pointer"
+                                            className="w-8 h-8 rounded cursor-pointer"
                                         />
-                                        <span className="ml-2 text-sm text-gray-600">{bgColor}</span>
+                                        <span className="ml-2 text-xs sm:text-sm text-gray-600">{bgColor}</span>
                                     </div>
                                 </div>
-                                {/* Add Buttons */}
-                                <div className="mb-4">
+                                <div className="mb-3">
                                     <button
                                         onClick={handleAddText}
-                                        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors w-full"
+                                        className="bg-blue-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-600 transition-colors w-full text-sm"
                                     >
                                         Add Text
                                     </button>
                                 </div>
-                                <div className="mb-4">
-                                    <label className="block text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
+                                <div className="mb-3">
+                                    <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
                                     <select
                                         value={logoShape}
                                         onChange={(e) => setLogoShape(e.target.value)}
-                                        className="w-full border px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        className="w-full border px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                     >
                                         {LOGO_SHAPES.map(shape => (
                                             <option key={shape.value} value={shape.value}>{shape.label}</option>
                                         ))}
                                     </select>
                                 </div>
-                                <div className="mb-4">
-                                    <label className="block text-sm mb-1 font-medium text-gray-700">Add Logo</label>
+                                <div className="mb-3">
+                                    <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Add Logo</label>
                                     <input
                                         type="file"
                                         accept="image/*"
                                         onChange={handleAddLogo}
-                                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                                        className="block w-full text-xs sm:text-sm text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
                                     />
                                 </div>
-                                {/* Profile Logo Settings */}
                                 {profileLogo && (
-                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                        <h3 className="text-sm font-semibold mb-2 text-gray-800">Profile Logo</h3>
-                                        <div className="flex items-center mb-2">
+                                    <div className="mb-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
+                                        <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-800">Profile Logo</h3>
+                                        <div className="flex items-center mb-1 sm:mb-2">
                                             <input
                                                 type="checkbox"
                                                 checked={profileLogoSettings.visible}
                                                 onChange={(e) => updateActiveObject({ visible: e.target.checked })}
                                                 className="mr-2"
                                             />
-                                            <label className="text-sm text-gray-700">Show Profile Logo</label>
+                                            <label className="text-xs sm:text-sm text-gray-700">Show Profile Logo</label>
                                         </div>
-                                        <div className="mb-2">
+                                        <div className="mb-1 sm:mb-2">
                                             <label className="block text-xs mb-1 font-medium text-gray-700">Shape</label>
                                             <select
                                                 value={profileLogoSettings.shape}
@@ -1270,7 +1250,7 @@ function CustomPosterEditor() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="mb-2">
+                                        <div className="mb-1 sm:mb-2">
                                             <label className="block text-xs mb-1 font-medium text-gray-700">Size: {Math.round(profileLogoSettings.width)} × {Math.round(profileLogoSettings.height)}px</label>
                                             <input
                                                 type="range"
@@ -1289,15 +1269,14 @@ function CustomPosterEditor() {
                                         </div>
                                         <button
                                             onClick={() => setActiveIndex('profile')}
-                                            className={`w-full mt-2 px-3 py-1 text-xs rounded ${activeIndex === 'profile' ? 'bg-blue-100 text-blue-800 border border-blue-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                            className={`w-full mt-1 px-2 py-1 text-xs rounded ${activeIndex === 'profile' ? 'bg-blue-100 text-blue-800 border border-blue-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                                         >
                                             {activeIndex === 'profile' ? 'Profile Logo Selected' : 'Select Profile Logo'}
                                         </button>
                                     </div>
                                 )}
-                                {/* Delete Selected Object */}
                                 {activeIndex !== null && (
-                                    <div className="mb-4">
+                                    <div className="mb-3">
                                         <button
                                             onClick={() => {
                                                 if (activeIndex === 'profile') {
@@ -1309,89 +1288,85 @@ function CustomPosterEditor() {
                                                     setIsEditingText(false);
                                                 }
                                             }}
-                                            className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors w-full"
+                                            className="bg-red-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-red-600 transition-colors w-full text-sm"
                                         >
                                             {activeIndex === 'profile' ? 'Hide Profile Logo' : 'Delete Selected'}
                                         </button>
                                     </div>
                                 )}
-                                {/* Active Object Props */}
                                 {activeIndex !== null && (
-                                    <div className="mt-4 border-t pt-3">
-                                        <h3 className="text-sm font-semibold mb-2 text-gray-800">
+                                    <div className="mt-3 border-t pt-2">
+                                        <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-800">
                                             {activeIndex === 'profile' ? 'Profile Logo Settings' : 'Selected Object'}
                                         </h3>
                                         {activeIndex !== 'profile' && objects[activeIndex] && objects[activeIndex].type === "text" && (
                                             <>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Text Content (Multi-line supported)</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Text Content</label>
                                                 <textarea
                                                     value={textInput}
                                                     onChange={handleTextChange}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
-                                                    placeholder="Enter text here... Use Enter for new lines"
-                                                    rows={3}
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
+                                                    placeholder="Enter text... Use Enter for new lines"
+                                                    rows={2}
                                                 />
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Font Family</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Font Family</label>
                                                 <select
                                                     value={objects[activeIndex].font}
                                                     onChange={(e) => updateActiveObject({ font: e.target.value })}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                                 >
                                                     {FONT_OPTIONS.map(font => (
                                                         <option key={font} value={font}>{font}</option>
                                                     ))}
                                                 </select>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Font Size: {objects[activeIndex].size}px</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Font Size: {objects[activeIndex].size}px</label>
                                                 <input
                                                     type="range"
                                                     min="10"
                                                     max="100"
                                                     value={objects[activeIndex].size}
                                                     onChange={(e) => updateActiveObject({ size: parseInt(e.target.value) })}
-                                                    className="w-full mb-3"
+                                                    className="w-full mb-2"
                                                 />
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Text Color</label>
-                                                <div className="flex items-center mb-3">
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Text Color</label>
+                                                <div className="flex items-center mb-2">
                                                     <input
                                                         type="color"
                                                         value={objects[activeIndex].color}
                                                         onChange={(e) => updateActiveObject({ color: e.target.value })}
-                                                        className="w-10 h-10 rounded cursor-pointer"
+                                                        className="w-8 h-8 rounded cursor-pointer"
                                                     />
-                                                    <span className="ml-2 text-sm text-gray-600">{objects[activeIndex].color}</span>
+                                                    <span className="ml-2 text-xs sm:text-sm text-gray-600">{objects[activeIndex].color}</span>
                                                 </div>
-                                                <div className="flex gap-2 mt-2">
+                                                <div className="flex gap-1 mt-1">
                                                     <button
                                                         onClick={() => updateActiveObject({ bold: !objects[activeIndex].bold })}
-                                                        className={`px-3 py-2 border rounded-lg font-bold ${objects[activeIndex].bold ? 'bg-pink-100 border-pink-500' : 'bg-white'}`}
+                                                        className={`px-2 py-1 border rounded text-xs font-bold ${objects[activeIndex].bold ? 'bg-pink-100 border-pink-500' : 'bg-white'}`}
                                                     >
                                                         B
                                                     </button>
                                                     <button
                                                         onClick={() => updateActiveObject({ italic: !objects[activeIndex].italic })}
-                                                        className={`px-3 py-2 border rounded-lg italic ${objects[activeIndex].italic ? 'bg-pink-100 border-pink-500' : 'bg-white'}`}
+                                                        className={`px-2 py-1 border rounded text-xs italic ${objects[activeIndex].italic ? 'bg-pink-100 border-pink-500' : 'bg-white'}`}
                                                     >
                                                         I
                                                     </button>
-                                                </div>
-                                                <div className="mt-3 text-xs text-gray-500">
-                                                    💡 Tip: Double-click text on canvas to edit inline with multi-line support, drag corners to resize. Press Ctrl+Enter or click outside to finish editing.
                                                 </div>
                                             </>
                                         )}
                                         {activeIndex !== 'profile' && objects[activeIndex] && objects[activeIndex].type === "image" && (
                                             <>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
                                                 <select
                                                     value={objects[activeIndex].shape}
                                                     onChange={(e) => updateActiveObject({ shape: e.target.value })}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                                 >
                                                     {LOGO_SHAPES.map(shape => (
                                                         <option key={shape.value} value={shape.value}>{shape.label}</option>
                                                     ))}
                                                 </select>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Size: {Math.round(objects[activeIndex].width)} × {Math.round(objects[activeIndex].height)}px</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Size</label>
                                                 <input
                                                     type="range"
                                                     min="20"
@@ -1404,26 +1379,23 @@ function CustomPosterEditor() {
                                                             height: newSize,
                                                         });
                                                     }}
-                                                    className="w-full mb-3"
+                                                    className="w-full mb-2"
                                                 />
-                                                <div className="mt-3 text-xs text-gray-500">
-                                                    💡 Tip: Drag corner handles on canvas to resize freely
-                                                </div>
                                             </>
                                         )}
                                         {activeIndex === 'profile' && (
                                             <>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Logo Shape</label>
                                                 <select
                                                     value={profileLogoSettings.shape}
                                                     onChange={(e) => updateActiveObject({ shape: e.target.value })}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                                 >
                                                     {LOGO_SHAPES.map(shape => (
                                                         <option key={shape.value} value={shape.value}>{shape.label}</option>
                                                     ))}
                                                 </select>
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Size: {Math.round(profileLogoSettings.width)} × {Math.round(profileLogoSettings.height)}px</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Size</label>
                                                 <input
                                                     type="range"
                                                     min="20"
@@ -1436,38 +1408,34 @@ function CustomPosterEditor() {
                                                             height: newSize,
                                                         });
                                                     }}
-                                                    className="w-full mb-3"
+                                                    className="w-full mb-2"
                                                 />
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Position X</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Position X</label>
                                                 <input
                                                     type="number"
                                                     value={Math.round(profileLogoSettings.x)}
                                                     onChange={(e) => updateActiveObject({ x: parseInt(e.target.value) })}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                                 />
-                                                <label className="block text-sm mb-1 font-medium text-gray-700">Position Y</label>
+                                                <label className="block text-xs sm:text-sm mb-1 font-medium text-gray-700">Position Y</label>
                                                 <input
                                                     type="number"
                                                     value={Math.round(profileLogoSettings.y)}
                                                     onChange={(e) => updateActiveObject({ y: parseInt(e.target.value) })}
-                                                    className="w-full border mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    className="w-full border mb-2 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs sm:text-sm"
                                                 />
-                                                <div className="mt-3 text-xs text-gray-500">
-                                                    💡 Tip: Drag profile logo on canvas to reposition, drag corners to resize
-                                                </div>
                                             </>
                                         )}
                                     </div>
                                 )}
-                                {/* Layer Management */}
                                 {(objects.length > 0 || profileLogo) && (
-                                    <div className="mt-4 border-t pt-3">
-                                        <h3 className="text-sm font-semibold mb-2 text-gray-800">Layers</h3>
-                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    <div className="mt-3 border-t pt-2">
+                                        <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-800">Layers</h3>
+                                        <div className="space-y-1 max-h-24 overflow-y-auto text-xs">
                                             {profileLogo && profileLogoSettings.visible && (
                                                 <div
                                                     onClick={() => setActiveIndex('profile')}
-                                                    className={`p-2 rounded cursor-pointer text-sm ${activeIndex === 'profile'
+                                                    className={`p-1.5 rounded cursor-pointer ${activeIndex === 'profile'
                                                         ? 'bg-blue-100 border-blue-500 border'
                                                         : 'bg-gray-50 hover:bg-gray-100'
                                                         }`}
@@ -1479,29 +1447,24 @@ function CustomPosterEditor() {
                                                 <div
                                                     key={i}
                                                     onClick={() => setActiveIndex(i)}
-                                                    className={`p-2 rounded cursor-pointer text-sm ${i === activeIndex
+                                                    className={`p-1.5 rounded cursor-pointer ${i === activeIndex
                                                         ? 'bg-blue-100 border-blue-500 border'
                                                         : 'bg-gray-50 hover:bg-gray-100'
                                                         }`}
                                                 >
-                                                    {obj.type === "text" ? `Text: ${obj.text.split('\n')[0].slice(0, 15)}${obj.text.length > 15 ? '...' : ''}` : `Image (${obj.shape})`}
+                                                    {obj.type === "text" ? `Text: ${obj.text.split('\n')[0].slice(0, 12)}${obj.text.length > 12 ? '...' : ''}` : `Image (${obj.shape})`}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 )}
-                                {/* Keyboard Shortcuts */}
-                                <div className="mt-4 border-t pt-3">
-                                    <h3 className="text-sm font-semibold mb-2 text-gray-800">Shortcuts & Features</h3>
-                                    <div className="text-xs text-gray-600 space-y-1">
-                                        <div>• Profile image auto-loads from your account</div>
-                                        <div>• Multi-line text support with Enter key</div>
+                                <div className="mt-3 border-t pt-2">
+                                    <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-gray-800">Tips</h3>
+                                    <div className="text-xs text-gray-600 space-y-0.5">
+                                        <div>• Profile logo auto-positions top-right</div>
                                         <div>• Double-click text to edit inline</div>
-                                        <div>• Ctrl+Enter or click outside to finish editing</div>
-                                        <div>• Drag objects to move, corners to resize</div>
-                                        <div>• Profile logo appears at top right by default</div>
-                                        <div>• Mobile & email auto-added from your account</div>
-                                        <div>• All shapes: Circle, Rectangle, Rounded, Triangle</div>
+                                        <div>• Drag corners to resize elements</div>
+                                        <div>• Works on mobile & desktop</div>
                                     </div>
                                 </div>
                             </div>

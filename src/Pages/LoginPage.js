@@ -83,7 +83,8 @@ const LoginPage = () => {
 
   const handleDismissPrompt = () => setShowInstallPrompt(false);
 
-  const handleSubmit = async (e) => {
+
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (!mobile) {
@@ -94,45 +95,59 @@ const LoginPage = () => {
   setLoading(true);
 
   try {
-    // Step 1: Get all users from your backend
+    // Step 1: Get all users
     const userResponse = await axios.get("https://api.editezy.com/api/admin/getallusers");
 
     if (userResponse.status === 200 && Array.isArray(userResponse.data.users)) {
       const users = userResponse.data.users;
 
-      // Step 2: Check if the entered mobile exists in DB
+      // Step 2: Check if entered mobile exists
       const existingUser = users.find((user) => user.mobile === mobile);
 
       if (existingUser) {
-        // Step 3: Store user info in localStorage
+        // Step 3: Store base user info in localStorage
         localStorage.setItem("userName", existingUser.name || "");
         localStorage.setItem("userEmail", existingUser.email || "");
         localStorage.setItem("userMobile", existingUser.mobile || "");
         localStorage.setItem("userImage", existingUser.profileImage || "");
 
-        // Step 4 (Optional): Try sending OTP
+        // Step 4: Send OTP (optional)
         try {
-          await axios.post("https://api.editezy.com/api/users/login", { mobile });
-          console.log("OTP sent successfully to:", mobile);
-          navigate("/verify-otp");
+          const response = await axios.post("https://api.editezy.com/api/users/login", { mobile });
+
+          if (response.status === 200) {
+            const { user } = response.data;
+            const { name, email, mobile, subscribedPlans } = user;
+
+            // Store subscribed plans as well
+            localStorage.setItem("userName", name || "");
+            localStorage.setItem("userEmail", email || "");
+            localStorage.setItem("userMobile", mobile || "");
+            localStorage.setItem("subscribedPlans", JSON.stringify(subscribedPlans || []));
+
+            console.log("✅ OTP sent successfully to:", mobile);
+            console.log("📦 Subscribed Plans:", subscribedPlans);
+            navigate("/verify-otp");
+          }
         } catch (otpError) {
-          console.warn("OTP sending failed:", otpError);
+          console.warn("⚠️ OTP sending failed:", otpError);
           navigate("/verify-otp");
         }
       } else {
-        console.log("New user detected. Redirecting to register...");
+        console.log("🆕 New user detected. Redirecting to register...");
         navigate("/register");
       }
     } else {
       setError("Unable to fetch users. Please try again.");
     }
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("❌ Login error:", err);
     setError(err.response?.data?.message || "Login failed.");
   } finally {
     setLoading(false);
   }
 };
+
 
   const iOSInstallInstructions = () => (
     <div className="mt-4 text-left text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
