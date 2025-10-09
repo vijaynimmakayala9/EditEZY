@@ -57,7 +57,6 @@ const SinglePoster = () => {
   }, [posterId]);
 
   const userId = localStorage.getItem("userId");
-
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -78,14 +77,12 @@ const SinglePoster = () => {
     if (!poster) return;
     const imagesToLoad = [];
     const loadedImages = {};
-
     if (poster.designData.bgImage && poster.designData.bgImage.url) {
       imagesToLoad.push({
         key: 'background',
         url: poster.designData.bgImage.url
       });
     }
-
     if (poster.designData.overlayImages && poster.designData.overlayImages.length > 0) {
       poster.designData.overlayImages.forEach((overlay, index) => {
         imagesToLoad.push({
@@ -94,14 +91,12 @@ const SinglePoster = () => {
         });
       });
     }
-
     if (userProfile && userProfile.profileImage) {
       imagesToLoad.push({
         key: 'profile',
         url: userProfile.profileImage
       });
     }
-
     const loadPromises = imagesToLoad.map(({ key, url }) => {
       return new Promise((resolve) => {
         const img = new Image();
@@ -117,7 +112,6 @@ const SinglePoster = () => {
         img.src = url;
       });
     });
-
     Promise.all(loadPromises).then(() => {
       setImagesLoaded(loadedImages);
     });
@@ -127,61 +121,59 @@ const SinglePoster = () => {
     preloadImages(poster);
   }, [poster, preloadImages]);
 
-  // Initialize default positions for name, mobile, and profile image
-  // Initialize default positions for name, mobile, and profile image
-// Initialize default positions for name, mobile, and profile image
-useEffect(() => {
-  if (!poster) return;
+  // ✅ Initialize default positions — mobile now at bottom-right
+  useEffect(() => {
+    if (!poster) return;
+    const CANVAS_WIDTH = 794;
+    const CANVAS_HEIGHT = 1123;
+    const updatedPoster = { ...poster };
+    const designData = updatedPoster.designData;
 
-  const CANVAS_WIDTH = 794;
-  const CANVAS_HEIGHT = 1123;
-  const updatedPoster = { ...poster };
-  const designData = updatedPoster.designData;
+    // Profile image: top-right
+    if (!designData.profileImageSettings) {
+      designData.profileImageSettings = {
+        x: CANVAS_WIDTH - 150,
+        y: 50,
+        width: 100,
+        height: 100,
+        visible: true
+      };
+    }
 
-  // Profile image: top-right
-  if (!designData.profileImageSettings) {
-    designData.profileImageSettings = {
-      x: CANVAS_WIDTH - 150,
-      y: 50,
-      width: 100,
-      height: 100,
-      visible: true
-    };
-  }
+    // Name: bottom-left
+    if (
+      designData.textSettings.nameX === undefined ||
+      designData.textSettings.nameY === undefined
+    ) {
+      designData.textSettings.nameX = 50;
+      designData.textSettings.nameY = CANVAS_HEIGHT - 20;
+    }
 
-  // Name: bottom-left (50px from left)
-  if (
-    designData.textSettings.nameX === undefined ||
-    designData.textSettings.nameY === undefined
-  ) {
-    designData.textSettings.nameX = 50;
-    designData.textSettings.nameY = CANVAS_HEIGHT - 20;
-  }
+    // ✅ Mobile: bottom-right (only if not already set)
+    if (
+      designData.textSettings.mobileX === undefined ||
+      designData.textSettings.mobileY === undefined
+    ) {
+      designData.textSettings.mobileX = CANVAS_WIDTH - 50; // 50px from right edge
+      designData.textSettings.mobileY = CANVAS_HEIGHT - 20; // 20px from bottom
+    }
 
-  // ✅ Mobile: Static position (UI side)
-  designData.textSettings.mobileX = 600;
-  designData.textSettings.mobileY = CANVAS_HEIGHT - 80;
+    // Hide email by default
+    if (designData.textVisibility.email === undefined) {
+      designData.textVisibility.email = 'hidden';
+    }
 
-  // Hide email by default
-  if (designData.textVisibility.email === undefined) {
-    designData.textVisibility.email = 'hidden';
-  }
-
-  setPoster(updatedPoster);
-}, [poster]);
-
+    setPoster(updatedPoster);
+  }, [poster]);
 
   const renderPoster = useCallback(() => {
     if (!poster || !canvasRef.current || Object.keys(imagesLoaded).length === 0) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-
     const CANVAS_WIDTH = 794;
     const CANVAS_HEIGHT = 1123;
-
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const { designData } = poster;
@@ -212,14 +204,12 @@ useEffect(() => {
           ctx.strokeStyle = '#4285f4';
           ctx.lineWidth = 2;
           ctx.strokeRect(x - 5, y - 5, width + 10, height + 10);
-
           const handleSize = 8;
           ctx.fillStyle = '#4285f4';
           ctx.fillRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
           ctx.fillRect(x + width - handleSize / 2, y - handleSize / 2, handleSize, handleSize);
           ctx.fillRect(x - handleSize / 2, y + height - handleSize / 2, handleSize, handleSize);
           ctx.fillRect(x + width - handleSize / 2, y + height - handleSize / 2, handleSize, handleSize);
-
           drawDeleteIcon(ctx, x + width - 10, y - 10);
         }
       }
@@ -253,14 +243,12 @@ useEffect(() => {
                 overlaySetting.width + 10,
                 overlaySetting.height + 10
               );
-
               const handleSize = 8;
               ctx.fillStyle = '#4285f4';
               ctx.fillRect(overlaySetting.x - handleSize / 2, overlaySetting.y - handleSize / 2, handleSize, handleSize);
               ctx.fillRect(overlaySetting.x + overlaySetting.width - handleSize / 2, overlaySetting.y - handleSize / 2, handleSize, handleSize);
               ctx.fillRect(overlaySetting.x - handleSize / 2, overlaySetting.y + overlaySetting.height - handleSize / 2, handleSize, handleSize);
               ctx.fillRect(overlaySetting.x + overlaySetting.width - handleSize / 2, overlaySetting.y + overlaySetting.height - handleSize / 2, handleSize, handleSize);
-
               drawDeleteIcon(ctx, overlaySetting.x + overlaySetting.width - 10, overlaySetting.y - 10);
             }
           }
@@ -283,7 +271,6 @@ useEffect(() => {
     ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -299,25 +286,20 @@ useEffect(() => {
     renderPoster();
   }, [renderPoster]);
 
-const drawTextElements = (ctx, designData) => {
-  const { textSettings, textStyles, textVisibility } = designData;
-
-  if (textVisibility.name === 'visible' && userProfile?.name) {
-    drawTextElement(ctx, 'name', userProfile.name, textSettings, textStyles);
-  }
-
-  if (textVisibility.mobile === 'visible' && userProfile?.mobile) {
-    drawTextElement(ctx, 'mobile', userProfile.mobile, textSettings, textStyles);
-  }
-
+  const drawTextElements = (ctx, designData) => {
+    const { textSettings, textStyles, textVisibility } = designData;
+    if (textVisibility.name === 'visible' && userProfile?.name) {
+      drawTextElement(ctx, 'name', userProfile.name, textSettings, textStyles);
+    }
+    if (textVisibility.mobile === 'visible' && userProfile?.mobile) {
+      drawTextElement(ctx, 'mobile', userProfile.mobile, textSettings, textStyles);
+    }
     if (textVisibility.title === 'visible' && poster.title) {
       drawTextElement(ctx, 'title', poster.title, textSettings, textStyles);
     }
-
     if (textVisibility.description === 'visible' && poster.description) {
       drawTextElement(ctx, 'description', poster.description, textSettings, textStyles);
     }
-
     if (textVisibility.tags === 'visible' && poster.tags && poster.tags.length > 0) {
       const tagsText = poster.tags.join(', ');
       drawTextElement(ctx, 'tags', tagsText, textSettings, textStyles);
@@ -327,45 +309,42 @@ const drawTextElements = (ctx, designData) => {
   const drawTextElement = (ctx, textType, text, textSettings, textStyles) => {
     ctx.font = `${textStyles[textType].fontStyle} ${textStyles[textType].fontWeight} ${textStyles[textType].fontSize}px ${textStyles[textType].fontFamily}`;
     ctx.fillStyle = textStyles[textType].color;
-    ctx.fillText(text, textSettings[`${textType}X`], textSettings[`${textType}Y`]);
+
+    let drawX = textSettings[`${textType}X`];
+    const drawY = textSettings[`${textType}Y`];
+
+    // For mobile: treat X as RIGHT edge → subtract text width
+    if (textType === 'mobile') {
+      const textWidth = ctx.measureText(text).width;
+      drawX = textSettings[`${textType}X`] - textWidth;
+    }
+
+    ctx.fillText(text, drawX, drawY);
 
     if (selectedText === textType && !isDownloading) {
       const textWidth = ctx.measureText(text).width;
+      const actualX = textType === 'mobile' ? drawX : textSettings[`${textType}X`];
+      const actualY = drawY;
+
       ctx.strokeStyle = '#4285f4';
       ctx.lineWidth = 2;
       ctx.strokeRect(
-        textSettings[`${textType}X`] - 5,
-        textSettings[`${textType}Y`] - textStyles[textType].fontSize,
+        actualX - 5,
+        actualY - textStyles[textType].fontSize,
         textWidth + 10,
         textStyles[textType].fontSize + 10
       );
 
       const handleSize = 8;
       ctx.fillStyle = '#4285f4';
-      ctx.fillRect(
-        textSettings[`${textType}X`] - handleSize / 2,
-        textSettings[`${textType}Y`] - textStyles[textType].fontSize - handleSize / 2,
-        handleSize,
-        handleSize
-      );
-      ctx.fillRect(
-        textSettings[`${textType}X`] + textWidth - handleSize / 2,
-        textSettings[`${textType}Y`] - textStyles[textType].fontSize - handleSize / 2,
-        handleSize,
-        handleSize
-      );
-      ctx.fillRect(
-        textSettings[`${textType}X`] - handleSize / 2,
-        textSettings[`${textType}Y`] + 5 - handleSize / 2,
-        handleSize,
-        handleSize
-      );
-      ctx.fillRect(
-        textSettings[`${textType}X`] + textWidth - handleSize / 2,
-        textSettings[`${textType}Y`] + 5 - handleSize / 2,
-        handleSize,
-        handleSize
-      );
+      // Top-left
+      ctx.fillRect(actualX - handleSize / 2, actualY - textStyles[textType].fontSize - handleSize / 2, handleSize, handleSize);
+      // Top-right
+      ctx.fillRect(actualX + textWidth - handleSize / 2, actualY - textStyles[textType].fontSize - handleSize / 2, handleSize, handleSize);
+      // Bottom-left
+      ctx.fillRect(actualX - handleSize / 2, actualY + 5 - handleSize / 2, handleSize, handleSize);
+      // Bottom-right
+      ctx.fillRect(actualX + textWidth - handleSize / 2, actualY + 5 - handleSize / 2, handleSize, handleSize);
     }
   };
 
@@ -385,14 +364,12 @@ const drawTextElements = (ctx, designData) => {
           textWidth + 10,
           textObj.style.fontSize + 10
         );
-
         const handleSize = 8;
         ctx.fillStyle = '#4285f4';
         ctx.fillRect(textObj.x - handleSize / 2, textObj.y - textObj.style.fontSize - handleSize / 2, handleSize, handleSize);
         ctx.fillRect(textObj.x + textWidth - handleSize / 2, textObj.y - textObj.style.fontSize - handleSize / 2, handleSize, handleSize);
         ctx.fillRect(textObj.x - handleSize / 2, textObj.y + 5 - handleSize / 2, handleSize, handleSize);
         ctx.fillRect(textObj.x + textWidth - handleSize / 2, textObj.y + 5 - handleSize / 2, handleSize, handleSize);
-
         drawDeleteIcon(ctx, textObj.x + textWidth + 15, textObj.y - textObj.style.fontSize - 5);
       }
     });
@@ -424,6 +401,7 @@ const drawTextElements = (ctx, designData) => {
     let currentText = "";
     let canvasX, canvasY;
     let fontSize = 24;
+
     if (textType.startsWith('new-')) {
       const index = parseInt(textType.split('-')[1]);
       currentText = newTexts[index].content;
@@ -433,14 +411,16 @@ const drawTextElements = (ctx, designData) => {
     } else {
       switch (textType) {
         case 'name':
-          currentText = userProfile?.name || ""; // userProfile से लें
+          currentText = userProfile?.name || "";
           canvasX = poster.designData.textSettings.nameX;
           canvasY = poster.designData.textSettings.nameY;
           fontSize = poster.designData.textStyles.name.fontSize;
           break;
         case 'mobile':
-          currentText = userProfile?.mobile || ""; // userProfile से लें
-          canvasX = poster.designData.textSettings.mobileX;
+          currentText = userProfile?.mobile || "";
+          // Use visual left position for editing
+          const mobileWidth = measureTextWidth(currentText, poster.designData.textStyles.mobile);
+          canvasX = poster.designData.textSettings.mobileX - mobileWidth;
           canvasY = poster.designData.textSettings.mobileY;
           fontSize = poster.designData.textStyles.mobile.fontSize;
           break;
@@ -509,7 +489,7 @@ const drawTextElements = (ctx, designData) => {
       const updatedPoster = { ...poster };
       switch (isEditing) {
         case 'name':
-          updatedPoster.name = editingText;
+          localStorage.setItem("userName", editingText);
           break;
         case 'mobile':
           localStorage.setItem("userMobile", editingText);
@@ -571,6 +551,7 @@ const drawTextElements = (ctx, designData) => {
 
     const { textSettings, textStyles, textVisibility, overlaySettings, profileImageSettings } = poster.designData;
 
+    // Profile image hit
     if (profileImageSettings && profileImageSettings.visible) {
       const { x: profileX, y: profileY, width, height } = profileImageSettings;
       const centerX = profileX + width / 2;
@@ -580,26 +561,12 @@ const drawTextElements = (ctx, designData) => {
       if (distance <= radius + 5) {
         setSelectedOverlay('profile');
         setSelectedText(null);
-        const handleSize = 8;
-        if (x >= profileX - handleSize / 2 && x <= profileX + handleSize / 2 &&
-          y >= profileY - handleSize / 2 && y <= profileY + handleSize / 2) {
-          setResizeDirection("top-left");
-        } else if (x >= profileX + width - handleSize / 2 && x <= profileX + width + handleSize / 2 &&
-          y >= profileY - handleSize / 2 && y <= profileY + handleSize / 2) {
-          setResizeDirection("top-right");
-        } else if (x >= profileX - handleSize / 2 && x <= profileX + handleSize / 2 &&
-          y >= profileY + height - handleSize / 2 && y <= profileY + height + handleSize / 2) {
-          setResizeDirection("bottom-left");
-        } else if (x >= profileX + width - handleSize / 2 && x <= profileX + width + handleSize / 2 &&
-          y >= profileY + height - handleSize / 2 && y <= profileY + height + handleSize / 2) {
-          setResizeDirection("bottom-right");
-        } else {
-          setResizeDirection("");
-        }
+        detectResizeHandle(x, y, profileX, profileY, width, height);
         return;
       }
     }
 
+    // Overlay images hit
     if (overlaySettings && overlaySettings.overlays) {
       for (let i = 0; i < overlaySettings.overlays.length; i++) {
         const overlay = overlaySettings.overlays[i];
@@ -611,27 +578,13 @@ const drawTextElements = (ctx, designData) => {
         ) {
           setSelectedOverlay(i);
           setSelectedText(null);
-          const handleSize = 8;
-          if (x >= overlay.x - handleSize / 2 && x <= overlay.x + handleSize / 2 &&
-            y >= overlay.y - handleSize / 2 && y <= overlay.y + handleSize / 2) {
-            setResizeDirection("top-left");
-          } else if (x >= overlay.x + overlay.width - handleSize / 2 && x <= overlay.x + overlay.width + handleSize / 2 &&
-            y >= overlay.y - handleSize / 2 && y <= overlay.y + handleSize / 2) {
-            setResizeDirection("top-right");
-          } else if (x >= overlay.x - handleSize / 2 && x <= overlay.x + handleSize / 2 &&
-            y >= overlay.y + overlay.height - handleSize / 2 && y <= overlay.y + overlay.height + handleSize / 2) {
-            setResizeDirection("bottom-left");
-          } else if (x >= overlay.x + overlay.width - handleSize / 2 && x <= overlay.x + overlay.width + handleSize / 2 &&
-            y >= overlay.y + overlay.height - handleSize / 2 && y <= overlay.y + overlay.height + handleSize / 2) {
-            setResizeDirection("bottom-right");
-          } else {
-            setResizeDirection("");
-          }
+          detectResizeHandle(x, y, overlay.x, overlay.y, overlay.width, overlay.height);
           return;
         }
       }
     }
 
+    // New texts hit
     for (let i = 0; i < newTexts.length; i++) {
       const textObj = newTexts[i];
       const textWidth = measureTextWidth(textObj.content, textObj.style);
@@ -650,133 +603,89 @@ const drawTextElements = (ctx, designData) => {
       ) {
         setSelectedText(`new-${i}`);
         setSelectedOverlay(null);
-        const handleSize = 8;
-        const topY = textObj.y - textHeight;
-        const bottomY = textObj.y + 5;
-        if (x >= textObj.x - handleSize / 2 && x <= textObj.x + handleSize / 2 &&
-          y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
-          setResizeDirection("top-left");
-        } else if (x >= textObj.x + textWidth - handleSize / 2 && x <= textObj.x + textWidth + handleSize / 2 &&
-          y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
-          setResizeDirection("top-right");
-        } else if (x >= textObj.x - handleSize / 2 && x <= textObj.x + handleSize / 2 &&
-          y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
-          setResizeDirection("bottom-left");
-        } else if (x >= textObj.x + textWidth - handleSize / 2 && x <= textObj.x + textWidth + handleSize / 2 &&
-          y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
-          setResizeDirection("bottom-right");
-        } else {
-          setResizeDirection("");
-        }
+        detectTextResizeHandle(x, y, textObj.x, textObj.y, textWidth, textHeight);
         return;
       }
     }
-const checkTextHit = (textKey) => {
-  // textValue को function parameter से हटाकर internally define करें
-  let textValue = "";
-  
-  if (textKey === 'name') {
-    textValue = userProfile?.name || ""; // userProfile से लें
-  } else if (textKey === 'mobile') {
-    textValue = userProfile?.mobile || ""; // userProfile से लें
-  } else if (textKey === 'title') {
-    textValue = poster?.title || "";
-  } else if (textKey === 'description') {
-    textValue = poster?.description || "";
-  } else if (textKey === 'tags') {
-    textValue = poster?.tags ? poster.tags.join(', ') : "";
-  }
-  
-  if (!textValue || poster.designData.textVisibility[textKey] !== 'visible') return false;
-  
-  const textX = poster.designData.textSettings[`${textKey}X`];
-  const textY = poster.designData.textSettings[`${textKey}Y`];
-  const fontSize = poster.designData.textStyles[textKey].fontSize;
-  const textWidth = measureTextWidth(textValue, poster.designData.textStyles[textKey]);
-  
-  return (
-    x >= textX - 5 &&
-    x <= textX + textWidth + 5 &&
-    y >= textY - fontSize - 5 &&
-    y <= textY + 5
-  );
-};
 
-const handleTextSelection = (textKey, textX, textY, textWidth, fontSize) => {
-  setSelectedText(textKey);
-  setSelectedOverlay(null);
-  const handleSize = 8;
-  const topY = textY - fontSize;
-  const bottomY = textY + 5;
-  if (x >= textX - handleSize / 2 && x <= textX + handleSize / 2 &&
-    y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
-    setResizeDirection("top-left");
-  } else if (x >= textX + textWidth - handleSize / 2 && x <= textX + textWidth + handleSize / 2 &&
-    y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
-    setResizeDirection("top-right");
-  } else if (x >= textX - handleSize / 2 && x <= textX + handleSize / 2 &&
-    y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
-    setResizeDirection("bottom-left");
-  } else if (x >= textX + textWidth - handleSize / 2 && x <= textX + textWidth + handleSize / 2 &&
-    y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
-    setResizeDirection("bottom-right");
-  } else {
-    setResizeDirection("");
-  }
-};
+    // Existing texts hit
+    const textTypes = ['name', 'mobile', 'title', 'description', 'tags'];
+    for (const textKey of textTypes) {
+      let textValue = "";
+      if (textKey === 'name') textValue = userProfile?.name || "";
+      else if (textKey === 'mobile') textValue = userProfile?.mobile || "";
+      else if (textKey === 'title') textValue = poster?.title || "";
+      else if (textKey === 'description') textValue = poster?.description || "";
+      else if (textKey === 'tags') textValue = poster?.tags ? poster.tags.join(', ') : "";
 
-// Calls update करें
-if (checkTextHit('name')) {
-  const textX = poster.designData.textSettings.nameX;
-  const textY = poster.designData.textSettings.nameY;
-  const textValue = userProfile?.name || "";
-  const textWidth = measureTextWidth(textValue, poster.designData.textStyles.name);
-  const fontSize = poster.designData.textStyles.name.fontSize;
-  handleTextSelection('name', textX, textY, textWidth, fontSize);
-  return;
-}
+      if (!textValue || poster.designData.textVisibility[textKey] !== 'visible') continue;
 
-if (checkTextHit('mobile')) {
-  const textX = poster.designData.textSettings.mobileX;
-  const textY = poster.designData.textSettings.mobileY;
-  const textValue = userProfile?.mobile || "";
-  const textWidth = measureTextWidth(textValue, poster.designData.textStyles.mobile);
-  const fontSize = poster.designData.textStyles.mobile.fontSize;
-  handleTextSelection('mobile', textX, textY, textWidth, fontSize);
-  return;
-}
+      let textX = poster.designData.textSettings[`${textKey}X`];
+      const textY = poster.designData.textSettings[`${textKey}Y`];
+      const fontSize = poster.designData.textStyles[textKey].fontSize;
+      const textWidth = measureTextWidth(textValue, poster.designData.textStyles[textKey]);
 
-if (checkTextHit('title')) {
-  const textX = poster.designData.textSettings.titleX;
-  const textY = poster.designData.textSettings.titleY;
-  const textWidth = measureTextWidth(poster.title, poster.designData.textStyles.title);
-  const fontSize = poster.designData.textStyles.title.fontSize;
-  handleTextSelection('title', textX, textY, textWidth, fontSize);
-  return;
-}
+      // Adjust X for mobile (stored as right edge)
+      if (textKey === 'mobile') {
+        textX = textX - textWidth;
+      }
 
-if (checkTextHit('description')) {
-  const textX = poster.designData.textSettings.descriptionX;
-  const textY = poster.designData.textSettings.descriptionY;
-  const textWidth = measureTextWidth(poster.description, poster.designData.textStyles.description);
-  const fontSize = poster.designData.textStyles.description.fontSize;
-  handleTextSelection('description', textX, textY, textWidth, fontSize);
-  return;
-}
-
-if (checkTextHit('tags')) {
-  const textX = poster.designData.textSettings.tagsX;
-  const textY = poster.designData.textSettings.tagsY;
-  const tagsText = poster.tags ? poster.tags.join(', ') : "";
-  const textWidth = measureTextWidth(tagsText, poster.designData.textStyles.tags);
-  const fontSize = poster.designData.textStyles.tags.fontSize;
-  handleTextSelection('tags', textX, textY, textWidth, fontSize);
-  return;
-}
+      if (
+        x >= textX - 5 &&
+        x <= textX + textWidth + 5 &&
+        y >= textY - fontSize - 5 &&
+        y <= textY + 5
+      ) {
+        setSelectedText(textKey);
+        setSelectedOverlay(null);
+        detectTextResizeHandle(x, y, textX, textY, textWidth, fontSize);
+        return;
+      }
+    }
 
     setSelectedText(null);
     setSelectedOverlay(null);
     setResizeDirection("");
+  };
+
+  const detectResizeHandle = (x, y, objX, objY, width, height) => {
+    const handleSize = 8;
+    if (x >= objX - handleSize / 2 && x <= objX + handleSize / 2 &&
+        y >= objY - handleSize / 2 && y <= objY + handleSize / 2) {
+      setResizeDirection("top-left");
+    } else if (x >= objX + width - handleSize / 2 && x <= objX + width + handleSize / 2 &&
+               y >= objY - handleSize / 2 && y <= objY + handleSize / 2) {
+      setResizeDirection("top-right");
+    } else if (x >= objX - handleSize / 2 && x <= objX + handleSize / 2 &&
+               y >= objY + height - handleSize / 2 && y <= objY + height + handleSize / 2) {
+      setResizeDirection("bottom-left");
+    } else if (x >= objX + width - handleSize / 2 && x <= objX + width + handleSize / 2 &&
+               y >= objY + height - handleSize / 2 && y <= objY + height + handleSize / 2) {
+      setResizeDirection("bottom-right");
+    } else {
+      setResizeDirection("");
+    }
+  };
+
+  const detectTextResizeHandle = (x, y, textX, textY, textWidth, fontSize) => {
+    const handleSize = 8;
+    const topY = textY - fontSize;
+    const bottomY = textY + 5;
+    if (x >= textX - handleSize / 2 && x <= textX + handleSize / 2 &&
+        y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
+      setResizeDirection("top-left");
+    } else if (x >= textX + textWidth - handleSize / 2 && x <= textX + textWidth + handleSize / 2 &&
+               y >= topY - handleSize / 2 && y <= topY + handleSize / 2) {
+      setResizeDirection("top-right");
+    } else if (x >= textX - handleSize / 2 && x <= textX + handleSize / 2 &&
+               y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
+      setResizeDirection("bottom-left");
+    } else if (x >= textX + textWidth - handleSize / 2 && x <= textX + textWidth + handleSize / 2 &&
+               y >= bottomY - handleSize / 2 && y <= bottomY + handleSize / 2) {
+      setResizeDirection("bottom-right");
+    } else {
+      setResizeDirection("");
+    }
   };
 
   const checkDeleteIconClick = (x, y) => {
@@ -890,18 +799,25 @@ if (checkTextHit('tags')) {
       } else {
         const textSettings = poster.designData.textSettings;
         const textStyles = poster.designData.textStyles;
-        textX = textSettings[`${selectedText}X`];
+        let textXRaw = textSettings[`${selectedText}X`];
         textY = textSettings[`${selectedText}Y`];
         const textValue = (() => {
           switch (selectedText) {
-            case 'name': return userProfile?.name || ''; // userProfile से लें
-    case 'mobile': return userProfile?.mobile || ''; // userProfile से लें
-    case 'tags': return poster.tags ? poster.tags.join(', ') : '';
-    default: return poster[selectedText] || '';
-  }
+            case 'name': return userProfile?.name || '';
+            case 'mobile': return userProfile?.mobile || '';
+            case 'tags': return poster.tags ? poster.tags.join(', ') : '';
+            default: return poster[selectedText] || '';
+          }
         })();
         textWidth = measureTextWidth(textValue, textStyles[selectedText]);
         textHeight = textStyles[selectedText].fontSize;
+
+        // Adjust for mobile: stored as right edge
+        if (selectedText === 'mobile') {
+          textX = textXRaw - textWidth;
+        } else {
+          textX = textXRaw;
+        }
       }
 
       if (resizeDirection) {
@@ -947,6 +863,7 @@ if (checkTextHit('tags')) {
     if (isDragging && selectedText) {
       const newX = x - dragOffset.x;
       const newY = y - dragOffset.y;
+
       if (selectedText.startsWith('new-')) {
         const index = parseInt(selectedText.split('-')[1]);
         const updatedTexts = [...newTexts];
@@ -955,7 +872,14 @@ if (checkTextHit('tags')) {
         setNewTexts(updatedTexts);
       } else {
         const updatedPoster = { ...poster };
-        updatedPoster.designData.textSettings[`${selectedText}X`] = newX;
+        // For mobile: store newX as right edge
+        if (selectedText === 'mobile') {
+          const textValue = userProfile?.mobile || '';
+          const textWidth = measureTextWidth(textValue, poster.designData.textStyles.mobile);
+          updatedPoster.designData.textSettings[`${selectedText}X`] = newX + textWidth;
+        } else {
+          updatedPoster.designData.textSettings[`${selectedText}X`] = newX;
+        }
         updatedPoster.designData.textSettings[`${selectedText}Y`] = newY;
         setPoster(updatedPoster);
       }
@@ -1023,8 +947,8 @@ if (checkTextHit('tags')) {
         const textStyles = updatedPoster.designData.textStyles;
         const textValue = (() => {
           switch (selectedText) {
-            case 'email': return localStorage.getItem("userEmail") || '';
-            case 'mobile': return localStorage.getItem("userMobile") || '';
+            case 'name': return userProfile?.name || '';
+            case 'mobile': return userProfile?.mobile || '';
             case 'tags': return poster.tags ? poster.tags.join(', ') : '';
             default: return poster[selectedText] || '';
           }
@@ -1164,7 +1088,6 @@ if (checkTextHit('tags')) {
           ...prev,
           [newKey]: img
         }));
-
         const updatedPoster = { ...poster };
         if (!updatedPoster.designData.overlayImages) {
           updatedPoster.designData.overlayImages = [];
@@ -1173,7 +1096,6 @@ if (checkTextHit('tags')) {
           url: imageUrl,
           publicId: `user-uploaded-${Date.now()}`
         });
-
         if (!updatedPoster.designData.overlaySettings.overlays) {
           updatedPoster.designData.overlaySettings.overlays = [];
         }
@@ -1185,7 +1107,6 @@ if (checkTextHit('tags')) {
           shape: "rectangle",
           borderRadius: 0
         });
-
         if (!updatedPoster.designData.overlayImageFilters) {
           updatedPoster.designData.overlayImageFilters = [];
         }
@@ -1196,7 +1117,6 @@ if (checkTextHit('tags')) {
           grayscale: 0,
           blur: 0
         });
-
         setPoster(updatedPoster);
         setSelectedOverlay(updatedPoster.designData.overlayImages.length - 1);
         setSelectedText(null);
@@ -1534,11 +1454,11 @@ if (checkTextHit('tags')) {
                       ? newTexts[parseInt(selectedText.split('-')[1])]?.content || ''
                       : (() => {
                         switch (selectedText) {
-                          case 'name': return userProfile?.name || ''; // userProfile से लें
-      case 'mobile': return userProfile?.mobile || ''; // userProfile से लें
-      case 'tags': return poster.tags ? poster.tags.join(', ') : '';
-      default: return poster[selectedText] || '';
-    }
+                          case 'name': return userProfile?.name || '';
+                          case 'mobile': return userProfile?.mobile || '';
+                          case 'tags': return poster.tags ? poster.tags.join(', ') : '';
+                          default: return poster[selectedText] || '';
+                        }
                       })()}
                     onChange={(e) => {
                       if (selectedText.startsWith('new-')) {
