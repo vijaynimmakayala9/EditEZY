@@ -1,7 +1,7 @@
 {
-  "short_name": "EzyStudio",
-  "name": "EzyStudio",
-  "description": "EzyStudio – Your easy studio management solution",
+  "short_name": "EditEZY",
+  "name": "EditEZY",
+  "description": "EditEZY – Your easy studio management solution",
   "icons": [
     { "src": "logo.png", "sizes": "48x48", "type": "image/png" },
     { "src": "lo.png", "sizes": "72x72", "type": "image/png" },

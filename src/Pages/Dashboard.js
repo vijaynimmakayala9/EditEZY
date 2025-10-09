@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract, FaSignOutAlt } from "react-icons/fa";
+import { FaTools, FaUserCircle, FaHeadset, FaArrowLeft, FaShieldAlt, FaFileContract, FaSignOutAlt, FaUndoAlt } from "react-icons/fa";
 import {
   FaUser,
   FaGift,
@@ -105,26 +105,33 @@ export default function Dashboard() {
 
   // Support tab items
   const support = [
-    {
-      name: "Contact Support",
-      desc: "Get help from our team",
-      route: "/contact",
-      icon: <FaEnvelope className="text-green-500" />,
-    },
-    {
-      name: "Privacy Policy",
-      desc: "Read our privacy guidelines",
-      route: "https://ezystudio.onrender.com/privacy-and-policy",
-      icon: <FaShieldAlt className="text-blue-500" />,
-    },
-    {
-      name: "Terms & Conditions",
-      desc: "View terms and conditions",
-      route: "https://ezystudio.onrender.com/terms-and-conditions",
-      icon: <FaFileContract className="text-purple-500" />,
-    },
-  ];
+  {
+    name: "Contact Support",
+    desc: "Get help from our team",
+    route: "/contact",
+    icon: <FaEnvelope className="text-green-500" />,
+  },
+  {
+    name: "Privacy Policy",
+    desc: "Read our privacy guidelines",
+    route: "https://editezy.onrender.com/privacy-and-policy",
+    icon: <FaShieldAlt className="text-blue-500" />,
+  },
+  {
+    name: "Terms & Conditions",
+    desc: "View terms and conditions",
+    route: "https://editezy.onrender.com/terms-and-conditions",
+    icon: <FaFileContract className="text-purple-500" />,
+  },
+  {
+    name: "Cancellation & Refund Policy",
+    desc: "Understand our refund and cancellation terms",
+    route: "https://editezy.onrender.com/cancel-refund",
+    icon: <FaUndoAlt className="text-red-500" />,
+  },
+];
 
+console.log(userId)
   const getItems = () => {
     if (activeTab === "Tools") return tools;
     if (activeTab === "Support") return support;
@@ -230,6 +237,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h2 className="font-semibold text-lg">{userName}</h2>
+              {/* <p className="font-semibold text-xs">{userId}</p> */}
             </div>
           </div>
         )}
