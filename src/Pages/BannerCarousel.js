@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Carousel } from "react-bootstrap";
 import axios from "axios";
@@ -7,28 +8,42 @@ const BannerCarousel = () => {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Fetch banners from the API
+
+  const fetchBanners = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get(
+        "https://api.editezy.com/api/poster/getbanners"
+      );
+
+      setBanners(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error("Error fetching banners:", err);
+      setError("Failed to load banners. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    axios
-      .get("https://api.editezy.com/api/poster/getbanners")
-      .then((response) => {
-        setBanners(response.data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching banners:", error);
-        setError("Failed to load banners. Please try again later.");
-        setLoading(false);
-      });
+    fetchBanners();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
+      <div className="flex min-h-48 w-full items-center justify-center rounded-3xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 shadow-sm sm:min-h-64 md:min-h-80">
         <div className="text-center">
-          <FaSpinner className="animate-spin text-4xl text-blue-500 mx-auto mb-3" />
-          <p className="text-gray-600">Loading banners...</p>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100">
+            <FaSpinner className="animate-spin text-2xl text-violet-600" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">
+            Loading banners...
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Preparing something beautiful for you
+          </p>
         </div>
       </div>
     );
@@ -36,12 +51,13 @@ const BannerCarousel = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
-        <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200 max-w-md mx-auto">
-          <p className="text-red-600 font-medium">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+      <div className="flex min-h-48 w-full items-center justify-center rounded-3xl border border-rose-100 bg-rose-50/70 p-5 sm:min-h-64 md:min-h-80">
+        <div className="text-center">
+          <p className="font-semibold text-rose-700">{error}</p>
+          <button
+            type="button"
+            onClick={fetchBanners}
+            className="mt-4 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2"
           >
             Try Again
           </button>
@@ -52,39 +68,111 @@ const BannerCarousel = () => {
 
   if (banners.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64 md:h-80 lg:h-96 bg-gray-100 rounded-lg border border-gray-200 shadow-sm">
-        <div className="text-center">
-          <p className="text-gray-600">No banners available at the moment.</p>
-        </div>
+      <div className="flex min-h-48 w-full items-center justify-center rounded-3xl border border-dashed border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-5 sm:min-h-64 md:min-h-80">
+        <p className="text-center text-sm font-medium text-slate-500">
+          No banners available at the moment.
+        </p>
       </div>
     );
   }
 
   return (
-  <div className="w-full overflow-hidden rounded-xl border border-gray-200 shadow-[0_4px_20px_rgba(59,130,246,0.25)]">
-    <Carousel
-      interval={4000}
-      controls={banners.length > 1}
-      indicators={banners.length > 1}
-      wrap={true}
-      pause={false}
-      className="w-full"
-    >
-      {banners.map((banner, index) => (
-        <Carousel.Item key={index}>
-          <div
-            className="w-full h-48 xs:h-56 sm:h-64 md:h-80 lg:h-96 xl:h-[500px] bg-cover bg-center relative"
-            style={{
-              backgroundImage: `url(${banner.images[0]})`,
-              backgroundPosition: "center center",
-            }}
-          ></div>
-        </Carousel.Item>
-      ))}
-    </Carousel>
-  </div>
-);
+    <section className="mx-auto max-w-7xl">
+      <div className="group relative overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-[0_8px_30px_rgba(109,40,217,0.12)] sm:rounded-3xl">
+        <Carousel
+          interval={4000}
+          controls={banners.length > 1}
+          indicators={banners.length > 1}
+          wrap
+          pause={false}
+          className="banner-carousel w-full"
+        >
+          {banners.map((banner, index) => {
+            const image = banner?.images?.[0];
 
+            return (
+              <Carousel.Item key={banner?._id || index}>
+                <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-violet-100 via-purple-50 to-fuchsia-100 xs:h-56 sm:h-64 md:h-80 lg:h-96 xl:h-[500px]">
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={`Promotional banner ${index + 1}`}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <span className="text-sm font-medium text-violet-400">
+                        Banner image unavailable
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/5" />
+                </div>
+              </Carousel.Item>
+            );
+          })}
+        </Carousel>
+      </div>
+
+      <style>{`
+        .banner-carousel .carousel-indicators {
+          margin-bottom: 12px;
+          gap: 5px;
+          align-items: center;
+        }
+
+        .banner-carousel .carousel-indicators [data-bs-target] {
+          width: 7px;
+          height: 7px;
+          margin: 0;
+          border: 0;
+          border-radius: 999px;
+          background-color: white;
+          opacity: 0.65;
+          transition: width 0.25s ease, opacity 0.25s ease;
+        }
+
+        .banner-carousel .carousel-indicators .active {
+          width: 22px;
+          opacity: 1;
+        }
+
+        .banner-carousel .carousel-control-prev,
+        .banner-carousel .carousel-control-next {
+          width: 10%;
+          opacity: 0;
+          transition: opacity 0.25s ease;
+        }
+
+        .banner-carousel:hover .carousel-control-prev,
+        .banner-carousel:hover .carousel-control-next {
+          opacity: 1;
+        }
+
+        @media (max-width: 640px) {
+          .banner-carousel .carousel-control-prev,
+          .banner-carousel .carousel-control-next {
+            opacity: 0.8;
+          }
+
+          .banner-carousel .carousel-indicators {
+            margin-bottom: 8px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .banner-carousel img {
+            transition: none;
+          }
+        }
+      `}</style>
+    </section>
+  );
 };
 
 export default BannerCarousel;

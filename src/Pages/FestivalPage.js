@@ -1,12 +1,10 @@
 // FestivalPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = "https://api.editezy.com/api/poster/festival";
 
-// ✅ For API (yyyy-mm-dd)
 function toAPIDateString(date) {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -15,7 +13,6 @@ function toAPIDateString(date) {
   return `${year}-${month}-${day}`;
 }
 
-// ✅ UI display (19 Sep)
 function formatDisplayDate(date) {
   return new Date(date).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -30,25 +27,53 @@ const FestivalPage = () => {
   const [festivals, setFestivals] = useState([]);
   const [error, setError] = useState("");
   const [showPopup, setShowPopup] = useState(false);
+  const posterScrollerRef = useRef(null);
 
   const navigate = useNavigate();
 
-  // prepare next 15 dates
   useEffect(() => {
     const list = [];
     const start = new Date();
+
     for (let i = 0; i < 15; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       list.push(d);
     }
+
     setDateList(list);
   }, []);
 
   useEffect(() => {
-    if (!selectedDate) return;
-    fetchFestivalsForDate(selectedDate);
+    if (selectedDate) fetchFestivalsForDate(selectedDate);
   }, [selectedDate]);
+
+  // Automatically scroll the poster row horizontally.
+  useEffect(() => {
+    const scroller = posterScrollerRef.current;
+    if (!scroller || loading || festivals.length < 2) return;
+
+    const intervalId = window.setInterval(() => {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      if (maxScroll <= 0) return;
+
+      if (scroller.scrollLeft >= maxScroll - 4) {
+        scroller.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        const firstPoster = scroller.querySelector("button");
+        const posterWidth = firstPoster?.getBoundingClientRect().width || 180;
+        const styles = window.getComputedStyle(scroller);
+        const gap = parseFloat(styles.columnGap || styles.gap) || 12;
+
+        scroller.scrollTo({
+          left: Math.min(scroller.scrollLeft + posterWidth + gap, maxScroll),
+          behavior: "smooth",
+        });
+      }
+    }, 2500);
+
+    return () => window.clearInterval(intervalId);
+  }, [festivals, loading]);
 
   const fetchFestivalsForDate = async (date) => {
     setLoading(true);
@@ -57,41 +82,50 @@ const FestivalPage = () => {
 
     try {
       const festivalDate = toAPIDateString(date);
-
       const res = await axios.post(API_URL, { festivalDate });
       const data =
-        res.data?.posters || res.data?.data || res.data?.festivals || res.data || [];
-
+        res.data?.posters ||
+        res.data?.data ||
+        res.data?.festivals ||
+        res.data ||
+        [];
       const normalized = Array.isArray(data) ? data : [data];
 
-      // ✅ filter local date
       const filtered = normalized.filter((item) => {
-        if (!item.festivalDate) return true;
-        const itemDate = new Date(item.festivalDate);
-        return itemDate.toDateString() === new Date(date).toDateString();
+        if (!item?.festivalDate) return true;
+        return (
+          new Date(item.festivalDate).toDateString() ===
+          new Date(date).toDateString()
+        );
       });
 
       setFestivals(filtered);
     } catch (err) {
       console.error("Error fetching festival posters:", err);
       setError(
-        err?.response?.data?.message || "Failed to fetch festival posters. Try again."
+        err?.response?.data?.message ||
+        "Failed to fetch festival posters. Try again."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Check user subscription
   const hasValidPlan = () => {
-    const plans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
-    if (plans.length === 0) return false;
+    try {
+      const plans = JSON.parse(localStorage.getItem("subscribedPlans") || "[]");
+      if (!Array.isArray(plans) || plans.length === 0) return false;
 
-    const currentDate = new Date();
-    return plans.some((plan) => new Date(plan.endDate) > currentDate);
+      const currentDate = new Date();
+      return plans.some(
+        (plan) => plan?.endDate && new Date(plan.endDate) > currentDate
+      );
+    } catch (err) {
+      console.error("Unable to read subscription plans:", err);
+      return false;
+    }
   };
 
-  // ✅ Handle poster click
   const handlePosterClick = (posterId) => {
     if (!hasValidPlan()) {
       setShowPopup(true);
@@ -100,464 +134,187 @@ const FestivalPage = () => {
     }
   };
 
-  const renderDateCard = (d) => {
-    const isSelected =
-      new Date(d).toDateString() === new Date(selectedDate).toDateString();
-
-    return (
-      <div
-        key={d.toString()}
-        onClick={() => setSelectedDate(d)}
-        className="date-card"
-        style={{
-          background: isSelected ? "#2E1EA8" : "#ffffff",
-          color: isSelected ? "#fff" : "#111827",
-          boxShadow: isSelected
-            ? "0 6px 18px rgba(69,45,180,0.18)"
-            : "0 3px 8px rgba(0,0,0,0.06)",
-        }}
-      >
-        <div className="date-day">{formatDisplayDate(d).split(" ")[0]}</div>
-        <div className="date-month">{formatDisplayDate(d).split(" ")[1]}</div>
-      </div>
-    );
-  };
+  const isSameDate = (first, second) =>
+    new Date(first).toDateString() === new Date(second).toDateString();
 
   return (
-    <div className="festival-container">
-      <h3 className="festival-title">Upcoming Festivals</h3>
-      <p className="festival-subtitle">Never miss a celebration</p>
+    <main className="mx-auto max-w-7xl bg-gradient-to-br from-violet-50/60 via-white to-fuchsia-50/50 px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
+      <header className="mb-5">
+        <h1 className="mb-1 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
+          Upcoming Festivals
+        </h1>
+        <p className="m-0 text-sm text-gray-500">
+          Never miss a celebration
+        </p>
+      </header>
 
-      {/* Date selector */}
-      <div className="festival-date-row">
-        {dateList.map((d) => renderDateCard(d))}
-      </div>
+      <section
+        aria-label="Choose a festival date"
+        className="mb-5 flex gap-3 overflow-x-auto px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {dateList.map((date) => {
+          const selected = isSameDate(date, selectedDate);
+          const displayDate = formatDisplayDate(date).split(" ");
 
-      {/* Festival posters */}
-      <div className="festival-grid">
+          return (
+            <button
+              key={date.toDateString()}
+              type="button"
+              onClick={() => setSelectedDate(date)}
+              aria-pressed={selected}
+              className={`flex h-[76px] min-w-[64px] shrink-0 flex-col items-center justify-center rounded-xl border px-3 transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 sm:h-[86px] sm:min-w-[70px] ${selected
+                  ? "border-violet-700 bg-violet-800 text-white shadow-lg shadow-violet-200"
+                  : "border-gray-100 bg-white text-gray-800 shadow-sm hover:border-violet-200 hover:shadow-md"
+                }`}
+            >
+              <span className="text-base font-bold">{displayDate[0]}</span>
+              <span className="mt-1 text-xs font-medium opacity-90">
+                {displayDate[1]}
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      <section
+        ref={posterScrollerRef}
+        aria-label="Festival posters"
+        className="flex flex-nowrap gap-3 overflow-x-auto scroll-smooth pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
+      >
         {loading ? (
-          <div className="festival-loading">
-            <Spinner animation="border" />
+          <div className="flex min-h-48 min-w-full items-center justify-center">
+            <div
+              className="h-10 w-10 animate-spin rounded-full border-4 border-violet-100 border-t-violet-700"
+              role="status"
+              aria-label="Loading festival posters"
+            />
           </div>
         ) : error ? (
-          <div className="festival-error">{error}</div>
+          <div className="min-w-full rounded-2xl border border-violet-100 bg-white px-5 py-10 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-2xl">
+              🎉
+            </div>
+
+            <h2 className="mb-2 text-base font-bold text-gray-900">
+              No Posters Available
+            </h2>
+
+            <p className="m-0 text-sm text-gray-500">
+              No posters available for this date. Please select another festival date.
+            </p>
+          </div>
         ) : festivals.length === 0 ? (
-          <div className="festival-empty">
-            <div className="festival-empty-title">No festivals found</div>
-            <div className="festival-empty-sub">Try selecting a different date</div>
+          <div className="min-w-full rounded-2xl border border-violet-100 bg-white px-5 py-10 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-2xl">
+              🎉
+            </div>
+            <h2 className="mb-1 text-base font-bold text-gray-900">
+              No festivals found
+            </h2>
+            <p className="m-0 text-sm text-gray-500">
+              Try selecting a different date.
+            </p>
           </div>
         ) : (
-          festivals.map((f) => (
-            <div
-              key={f._id || Math.random()}
-              className="festival-card"
-              onClick={() => handlePosterClick(f._id)}
-            >
-              <img
-                src={
-                  f.posterImage?.url ||
-                  f.designData?.bgImage?.url ||
-                  (f.images && f.images[0])
-                }
-                alt="festival-poster"
-                className="festival-img"
-              />
-              <span className="festival-pro-badge">PRO</span>
-            </div>
-          ))
-        )}
-      </div>
+          festivals.map((festival, index) => {
+            const imageUrl =
+              festival.posterImage?.url ||
+              festival.designData?.bgImage?.url ||
+              (Array.isArray(festival.images) ? festival.images[0] : "");
 
-      {/* ✅ Subscription Popup */}
-      {showPopup && (
-        <div className="festival-popup-overlay">
-          <div className="festival-popup">
-            <div className="festival-popup-icon">
-              <svg
-                className="festival-popup-svg"
-                fill="currentColor"
-                viewBox="0 0 24 24"
+            return (
+              <button
+                key={festival._id || `${imageUrl}-${index}`}
+                type="button"
+                onClick={() => handlePosterClick(festival._id)}
+                aria-label={`Open festival poster ${index + 1}`}
+                className="group relative w-[160px] min-w-[160px] shrink-0 overflow-hidden rounded-xl bg-white text-left shadow-md ring-1 ring-black/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 sm:w-[200px] sm:min-w-[200px] md:w-[220px] md:min-w-[220px]"
               >
-                <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 14.59V7h2v9.59l2.3-2.3 1.4 1.42-4 4-4-4 1.4-1.42 2.3 2.3z" />
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Festival poster"
+                    loading="lazy"
+                    className="aspect-[3/4] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                ) : (
+                  <div className="flex aspect-[3/4] w-full items-center justify-center bg-gradient-to-br from-violet-100 to-fuchsia-100 p-4 text-center text-sm font-medium text-violet-800">
+                    Festival poster
+                  </div>
+                )}
+                <span className="absolute right-2 top-2 rounded-md bg-violet-800 px-2 py-1 text-[10px] font-bold tracking-wider text-white shadow-md sm:text-xs">
+                  PRO
+                </span>
+              </button>
+            );
+          })
+        )}
+      </section>
+
+      {showPopup && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setShowPopup(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="festival-premium-title"
+            className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl sm:p-7"
+          >
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+              <svg
+                className="h-8 w-8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 3v10m0 0 4-4m-4 4-4-4M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"
+                />
               </svg>
             </div>
-            <h2 className="festival-popup-title">Premium Festival Posters</h2>
-            <p className="festival-popup-text">
+
+            <h2
+              id="festival-premium-title"
+              className="mb-2 text-lg font-bold text-gray-900"
+            >
+              Premium Festival Posters
+            </h2>
+            <p className="mb-6 text-sm leading-6 text-gray-500">
               Unlock all festival posters with a premium plan and never miss a
               celebration.
             </p>
-            <div className="festival-popup-buttons">
+
+            <div className="flex flex-col-reverse gap-3 sm:flex-row">
               <button
+                type="button"
                 onClick={() => setShowPopup(false)}
-                className="festival-popup-btn-cancel"
+                className="flex-1 rounded-xl bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-800 transition hover:bg-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
                 Maybe Later
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowPopup(false);
                   navigate("/plans");
                 }}
-                className="festival-popup-btn-upgrade"
+                className="flex-1 rounded-xl bg-violet-800 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-violet-200 transition hover:bg-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
                 Upgrade Now
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
-
-      {/* Enhanced Responsive CSS */}
-      <style>{`
-        .festival-container {
-          padding: 16px;
-          max-width: 100%;
-          margin: 0 auto;
-        }
-        
-        .festival-title {
-          margin-bottom: 4px;
-          font-weight: 700;
-          font-size: 20px;
-          color: #111827;
-        }
-        
-        .festival-subtitle {
-          margin: 0 0 18px;
-          color: #6b7280;
-          font-size: 14px;
-        }
-        
-        /* Date Row */
-        .festival-date-row {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 20px;
-          overflow-x: auto;
-          scrollbar-width: none;
-          padding: 4px 0;
-        }
-        
-        .festival-date-row::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .date-card {
-          min-width: 70px;
-          height: 90px;
-          border-radius: 12px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 10px;
-          cursor: pointer;
-          border: 1px solid rgba(0,0,0,0.04);
-          flex-shrink: 0;
-          transition: all 0.3s ease;
-        }
-        
-        .date-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(69,45,180,0.15);
-        }
-        
-        .date-day {
-          font-size: 16px;
-          font-weight: 700;
-        }
-        
-        .date-month {
-          font-size: 12px;
-          opacity: 0.9;
-        }
-        
-        /* Festival Grid */
-        .festival-grid {
-          min-height: 260px;
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-          gap: 15px;
-        }
-        
-        .festival-card {
-          border-radius: 10px;
-          overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-          cursor: pointer;
-          position: relative;
-          transition: all 0.3s ease;
-        }
-        
-        .festival-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .festival-img {
-          width: 100%;
-          height: 200px;
-          object-fit: cover;
-          display: block;
-        }
-        
-        .festival-pro-badge {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          background: #2E1EA8;
-          color: white;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 6px;
-          box-shadow: 0 2px 8px rgba(46, 30, 168, 0.3);
-        }
-        
-        /* Loading State */
-        .festival-loading {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 200px;
-          grid-column: 1 / -1;
-        }
-        
-        /* Error State */
-        .festival-error {
-          padding: 20px;
-          border-radius: 12px;
-          background: #fef2f2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-          grid-column: 1 / -1;
-          text-align: center;
-        }
-        
-        /* Empty State */
-        .festival-empty {
-          background: #fff;
-          border-radius: 14px;
-          padding: 30px;
-          box-shadow: 0 6px 18px rgba(15,23,42,0.06);
-          text-align: center;
-          grid-column: 1 / -1;
-        }
-        
-        .festival-empty-title {
-          font-size: 18px;
-          font-weight: 700;
-          margin-bottom: 8px;
-          color: #111827;
-        }
-        
-        .festival-empty-sub {
-          color: #6b7280;
-          font-size: 14px;
-        }
-        
-        /* Popup Styles */
-        .festival-popup-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 16px;
-        }
-        
-        .festival-popup {
-          background: white;
-          border-radius: 20px;
-          padding: 24px;
-          max-width: 320px;
-          width: 100%;
-          text-align: center;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-        }
-        
-        .festival-popup-icon {
-          width: 56px;
-          height: 56px;
-          border-radius: 12px;
-          background: #fef3c7;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 16px;
-        }
-        
-        .festival-popup-svg {
-          width: 32px;
-          height: 32px;
-          color: #d97706;
-        }
-        
-        .festival-popup-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #111827;
-          margin-bottom: 8px;
-        }
-        
-        .festival-popup-text {
-          color: #6b7280;
-          font-size: 14px;
-          margin-bottom: 24px;
-          line-height: 1.5;
-        }
-        
-        .festival-popup-buttons {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-        }
-        
-        .festival-popup-btn-cancel {
-          padding: 10px 16px;
-          border-radius: 10px;
-          color: #2E1EA8;
-          background: #e0e7ff;
-          border: none;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .festival-popup-btn-cancel:hover {
-          background: #d4dcfa;
-        }
-        
-        .festival-popup-btn-upgrade {
-          padding: 10px 16px;
-          border-radius: 10px;
-          background: #2E1EA8;
-          color: white;
-          border: none;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .festival-popup-btn-upgrade:hover {
-          background: #251a87;
-        }
-        
-        /* Responsive Design */
-        @media (min-width: 1024px) {
-          .festival-container {
-            max-width: 100%;
-            padding: 24px;
-          }
-          
-          .festival-title {
-            font-size: 24px;
-          }
-          
-          .festival-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-          }
-          
-          .festival-img {
-            height: 220px;
-          }
-        }
-        
-        @media (max-width: 768px) {
-          .festival-title {
-            font-size: 18px;
-          }
-          
-          .festival-subtitle {
-            font-size: 13px;
-          }
-          
-          .festival-grid {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-          }
-          
-          .festival-img {
-            height: 160px;
-          }
-          
-          .date-card {
-            min-width: 65px;
-            height: 80px;
-          }
-          
-          .date-day {
-            font-size: 15px;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .festival-container {
-            padding: 12px;
-          }
-          
-          .festival-title {
-            font-size: 16px;
-          }
-          
-          .festival-subtitle {
-            font-size: 12px;
-            margin-bottom: 16px;
-          }
-          
-          .festival-grid {
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 10px;
-          }
-          
-          .festival-img {
-            height: 140px;
-          }
-          
-          .date-card {
-            min-width: 60px;
-            height: 70px;
-            padding: 8px;
-          }
-          
-          .date-day {
-            font-size: 14px;
-          }
-          
-          .date-month {
-            font-size: 11px;
-          }
-          
-          .festival-popup {
-            padding: 20px;
-            margin: 16px;
-          }
-          
-          .festival-popup-buttons {
-            flex-direction: column;
-            gap: 8px;
-          }
-          
-          .festival-popup-btn-cancel,
-          .festival-popup-btn-upgrade {
-            width: 100%;
-          }
-        }
-        
-        @media (max-width: 360px) {
-          .festival-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          
-          .festival-img {
-            height: 120px;
-          }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 };
 

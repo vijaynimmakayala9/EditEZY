@@ -4,7 +4,7 @@ import { FaArrowLeft } from "react-icons/fa";
 
 
 const Invoice = () => {
-  const [invoices, setInvoices] = useState("");
+  const [invoices, setInvoices] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -26,16 +26,17 @@ const Invoice = () => {
   const handleDownload = async (invoice) => {
     try {
       // Create a printable HTML version of the invoice
-      const printWindow = window.open('', '_blank');
-      const htmlContent = generatePrintableHTML(invoice);
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Please allow pop-ups to print the invoice.");
+        return;
+      }
 
+      const htmlContent = generatePrintableHTML(invoice);
+      printWindow.document.open();
       printWindow.document.write(htmlContent);
       printWindow.document.close();
-
-      // Auto-trigger print dialog after content loads
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+      printWindow.onload = () => printWindow.print();
 
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -45,416 +46,104 @@ const Invoice = () => {
 
   const generatePrintableHTML = (invoice) => {
     const subtotal = invoice.items?.reduce((total, item) => {
-      return total + (parseFloat(item.offerPrice) || 0) * (parseInt(item.quantity) || 0);
+      return total + (parseFloat(item.offerPrice) || 0) * (parseInt(item.quantity, 10) || 0);
     }, 0) || 0;
+    const money = (value) => Number(value || 0).toFixed(2);
+    const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[char]));
 
-    return `
-<!DOCTYPE html>
-<html>
+    const itemRows = invoice.items?.length
+      ? invoice.items.map((item) => `
+        <tr class="border-b border-slate-200 even:bg-slate-50">
+          <td class="p-3 align-top">
+            <div class="font-semibold text-slate-900">${escapeHtml(item.productName)}</div>
+            ${item.description ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(item.description)}</div>` : ""}
+          </td>
+          <td class="p-3 text-center align-top">${escapeHtml(item.quantity)}</td>
+          <td class="p-3 text-center align-top">${escapeHtml(item.unit)}</td>
+          <td class="p-3 text-right align-top">${money(item.price)}</td>
+          <td class="p-3 text-right align-top font-semibold">${money(item.offerPrice)}</td>
+          <td class="p-3 text-center align-top">${escapeHtml(item.hsn || "N/A")}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="6" class="p-4 text-center text-slate-500">No items found</td></tr>`;
+
+    return `<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Invoice ${invoice.invoiceNumber}</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Helvetica', Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
-            background: white;
-        }
-        
-        .invoice-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px;
-        }
-        
-        /* Header Styles */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #2563eb;
-        }
-        
-        .company-info h1 {
-            font-size: 28px;
-            color: #1e40af;
-            margin-bottom: 8px;
-        }
-        
-        .company-details {
-            color: #6b7280;
-            line-height: 1.5;
-        }
-        
-        .invoice-info {
-            text-align: right;
-        }
-        
-        .invoice-title {
-            font-size: 32px;
-            color: #dc2626;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .invoice-number {
-            font-size: 16px;
-            font-weight: bold;
-            color: #374151;
-        }
-        
-        .status-badge {
-            background: #dcfce7;
-            color: #166534;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 8px;
-        }
-        
-        /* Date Info */
-        .date-info {
-            display: flex;
-            justify-content: space-between;
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-        
-        .date-item {
-            text-align: center;
-        }
-        
-        .date-label {
-            font-size: 10px;
-            color: #64748b;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        
-        .date-value {
-            font-size: 14px;
-            font-weight: bold;
-            color: #0f172a;
-        }
-        
-        /* Billing Info */
-        .billing-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-        }
-        
-        .bill-to, .ship-to {
-            flex: 1;
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .bill-to {
-            margin-right: 20px;
-        }
-        
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #1e40af;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-        
-        .customer-name {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 6px;
-        }
-        
-        /* Table Styles */
-        .items-section {
-            margin: 30px 0;
-        }
-        
-        .items-title {
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 12px;
-            border-radius: 8px 8px 0 0;
-            margin-bottom: 0;
-        }
-        
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 1px solid #e5e7eb;
-            border-top: none;
-        }
-        
-        .items-table th {
-            background: #1e40af;
-            color: white;
-            padding: 12px 8px;
-            text-align: left;
-            font-weight: bold;
-            font-size: 10px;
-        }
-        
-        .items-table td {
-            padding: 12px 8px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 11px;
-        }
-        
-        .items-table tr:nth-child(even) {
-            background: #f9fafb;
-        }
-        
-        .product-name {
-            font-weight: bold;
-        }
-        
-        .product-desc {
-            font-size: 9px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
-        
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        /* Totals */
-        .totals-section {
-            margin-top: 30px;
-            background: #f0f9ff;
-            border: 2px solid #0ea5e9;
-            border-radius: 8px;
-            padding: 20px;
-        }
-        
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        
-        .total-row.final {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #0ea5e9;
-        }
-        
-        .total-label {
-            font-weight: bold;
-        }
-        
-        .total-value {
-            font-weight: bold;
-        }
-        
-        .final .total-label {
-            font-size: 16px;
-            color: #0c4a6e;
-        }
-        
-        .final .total-value {
-            font-size: 18px;
-            color: #0c4a6e;
-        }
-        
-        /* Footer */
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #d1d5db;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .footer-section {
-            flex: 1;
-        }
-        
-        .footer-section:first-child {
-            margin-right: 20px;
-        }
-        
-        .footer-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #374151;
-        }
-        
-        .footer-text {
-            font-size: 10px;
-            color: #6b7280;
-            line-height: 1.4;
-        }
-        
-        @media print {
-            .invoice-container {
-                margin: 0;
-                padding: 20px;
-            }
-            
-            .header {
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-            }
-            
-            .date-info, .billing-info, .items-section, .totals-section {
-                margin-bottom: 20px;
-            }
-            
-            .footer {
-                margin-top: 30px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @page { size: auto; margin: 12mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .invoice-sheet { max-width: none !important; padding: 0 !important; }
+      thead { display: table-header-group; }
+      tr, .avoid-break { break-inside: avoid; }
+    }
+  </style>
 </head>
-<body>
-    <div class="invoice-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="company-info">
-                ${invoice.companyLogo ? `<img src="${invoice.companyLogo}" alt="Company Logo" style="max-height: 60px; margin-bottom: 10px;">` : ''}
-                <h1>${invoice.companyName || 'Your Company Name'}</h1>
-                <div class="company-details">
-                    123 Business Street<br>
-                    City, State 12345<br>
-                    Phone: (555) 123-4567<br>
-                    Email: info@company.com
-                </div>
-            </div>
-            <div class="invoice-info">
-                <div class="invoice-title">INVOICE</div>
-                <div class="invoice-number">${invoice.invoiceNumber}</div>
-                <div class="status-badge">PENDING</div>
-            </div>
+<body class="bg-white font-sans text-xs leading-relaxed text-slate-800">
+  <main class="invoice-sheet mx-auto max-w-4xl p-6 sm:p-10">
+    <header class="mb-7 flex flex-col gap-5 border-b-4 border-blue-600 pb-6 sm:flex-row sm:items-start sm:justify-between">
+      <section class="min-w-0">
+        ${invoice.companyLogo ? `<img src="${escapeHtml(invoice.companyLogo)}" alt="Company logo" class="mb-3 max-h-16 max-w-40 object-contain" />` : ""}
+        <h1 class="mb-2 break-words text-2xl font-bold text-blue-800 sm:text-3xl">${escapeHtml(invoice.companyName || "Your Company Name")}</h1>
+        <div class="space-y-0.5 text-slate-500">
+          <p>123 Business Street</p><p>City, State 12345</p><p>Phone: (555) 123-4567</p><p>Email: info@company.com</p>
         </div>
+      </section>
+      <section class="sm:text-right">
+        <div class="text-3xl font-extrabold tracking-wide text-red-600 sm:text-4xl">INVOICE</div>
+        <p class="mt-2 break-all text-base font-bold text-slate-700">${escapeHtml(invoice.invoiceNumber)}</p>
+        <span class="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-green-800">Pending</span>
+      </section>
+    </header>
 
-        <!-- Date Information -->
-        <div class="date-info">
-            <div class="date-item">
-                <div class="date-label">Issue Date</div>
-                <div class="date-value">${invoice.issuedDate}</div>
-            </div>
-            <div class="date-item">
-                <div class="date-label">Due Date</div>
-                <div class="date-value">${invoice.dueDate}</div>
-            </div>
-            <div class="date-item">
-                <div class="date-label">Payment Terms</div>
-                <div class="date-value">Net 30</div>
-            </div>
-        </div>
+    <section class="mb-7 grid grid-cols-1 gap-3 rounded-lg bg-slate-100 p-4 sm:grid-cols-3">
+      <div><p class="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Issue Date</p><p class="text-sm font-bold text-slate-900">${escapeHtml(invoice.issuedDate)}</p></div>
+      <div><p class="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Due Date</p><p class="text-sm font-bold text-slate-900">${escapeHtml(invoice.dueDate)}</p></div>
+      <div><p class="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Terms</p><p class="text-sm font-bold text-slate-900">Net 30</p></div>
+    </section>
 
-        <!-- Billing Information -->
-        <div class="billing-info">
-            <div class="bill-to">
-                <div class="section-title">Bill To</div>
-                <div class="customer-name">${invoice.customerName}</div>
-                <div>Mobile: ${invoice.customerMobile}</div>
-                <div>${invoice.customerAddress}</div>
-            </div>
-            <div class="ship-to">
-                <div class="section-title">Ship To</div>
-                <div class="customer-name">${invoice.customerName}</div>
-                <div>${invoice.customerAddress}</div>
-            </div>
-        </div>
+    <section class="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Bill To</h2>
+        <p class="mb-1 text-sm font-bold text-slate-900">${escapeHtml(invoice.customerName)}</p>
+        <p>Mobile: ${escapeHtml(invoice.customerMobile)}</p><p class="break-words">${escapeHtml(invoice.customerAddress)}</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <h2 class="mb-3 text-sm font-bold uppercase tracking-wide text-blue-800">Ship To</h2>
+        <p class="mb-1 text-sm font-bold text-slate-900">${escapeHtml(invoice.customerName)}</p><p class="break-words">${escapeHtml(invoice.customerAddress)}</p>
+      </div>
+    </section>
 
-        <!-- Items -->
-        <div class="items-section">
-            <div class="items-title">ITEMS & SERVICES</div>
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th style="width: 35%;">PRODUCT/SERVICE</th>
-                        <th style="width: 10%;" class="text-center">QTY</th>
-                        <th style="width: 10%;" class="text-center">UNIT</th>
-                        <th style="width: 15%;" class="text-right">PRICE</th>
-                        <th style="width: 15%;" class="text-right">OFFER PRICE</th>
-                        <th style="width: 15%;" class="text-center">HSN CODE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${invoice.items?.map(item => `
-                        <tr>
-                            <td>
-                                <div class="product-name">${item.productName}</div>
-                                ${item.description ? `<div class="product-desc">${item.description}</div>` : ''}
-                            </td>
-                            <td class="text-center">${item.quantity}</td>
-                            <td class="text-center">${item.unit}</td>
-                            <td class="text-right">${parseFloat(item.price).toFixed(2)}</td>
-                            <td class="text-right">${parseFloat(item.offerPrice).toFixed(2)}</td>
-                            <td class="text-center">${item.hsn || 'N/A'}</td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="6" class="text-center">No items found</td></tr>'}
-                </tbody>
-            </table>
-        </div>
+    <section class="mb-7">
+      <h2 class="rounded-t-lg bg-blue-100 px-4 py-3 text-center text-sm font-bold uppercase tracking-wide text-blue-800">Items &amp; Services</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[620px] border-collapse border border-slate-200 text-[11px]">
+          <thead class="bg-blue-800 text-white"><tr>
+            <th class="w-[35%] p-3 text-left font-bold">Product/Service</th><th class="p-3 text-center font-bold">Qty</th><th class="p-3 text-center font-bold">Unit</th><th class="p-3 text-right font-bold">Price</th><th class="p-3 text-right font-bold">Offer Price</th><th class="p-3 text-center font-bold">HSN Code</th>
+          </tr></thead>
+          <tbody>${itemRows}</tbody>
+        </table>
+      </div>
+    </section>
 
-        <!-- Totals -->
-        <div class="totals-section">
-            <div class="total-row">
-                <span class="total-label">Subtotal:</span>
-                <span class="total-value">${subtotal.toFixed(2)}</span>
-            </div>
-            <div class="total-row">
-                <span class="total-label">Tax (0%):</span>
-                <span class="total-value">$0.00</span>
-            </div>
-            <div class="total-row">
-                <span class="total-label">Discount:</span>
-                <span class="total-value">$0.00</span>
-            </div>
-            <div class="total-row final">
-                <span class="total-label">TOTAL AMOUNT:</span>
-                <span class="total-value">${invoice.amount?.toFixed(2) || subtotal.toFixed(2)}</span>
-            </div>
-        </div>
+    <section class="avoid-break ml-auto max-w-md rounded-lg border-2 border-sky-500 bg-sky-50 p-5">
+      <div class="mb-2 flex items-center justify-between gap-4"><span class="font-semibold">Subtotal:</span><span class="font-bold">${money(subtotal)}</span></div>
+      <div class="mb-2 flex items-center justify-between gap-4"><span class="font-semibold">Tax (0%):</span><span class="font-bold">0.00</span></div>
+      <div class="mb-2 flex items-center justify-between gap-4"><span class="font-semibold">Discount:</span><span class="font-bold">0.00</span></div>
+      <div class="mt-4 flex items-center justify-between gap-4 border-t-2 border-sky-500 pt-4 text-base font-extrabold text-sky-950"><span>Total Amount:</span><span>${money(invoice.amount ?? subtotal)}</span></div>
+    </section>
 
-        <!-- Footer -->
-        <div class="footer">
-            <div class="footer-section">
-                <div class="footer-title">Payment Information</div>
-                <div class="footer-text">
-                    Please make payment within 30 days.<br>
-                    Bank: Your Bank Name<br>
-                    Account: 1234-5678-9012<br>
-                    Routing: 987654321
-                </div>
-            </div>
-            <div class="footer-section">
-                <div class="footer-title">Terms & Conditions</div>
-                <div class="footer-text">
-                    Payment is due within 30 days.<br>
-                    Late payments may incur additional charges.<br>
-                    Thank you for your business!
-                </div>
-            </div>
-        </div>
-    </div>
+    <footer class="mt-9 grid grid-cols-1 gap-5 border-t border-slate-300 pt-5 sm:grid-cols-2">
+      <section><h2 class="mb-2 font-bold text-slate-700">Payment Information</h2><div class="text-[10px] leading-relaxed text-slate-500"><p>Please make payment within 30 days.</p><p>Bank: Your Bank Name</p><p>Account: 1234-5678-9012</p><p>Routing: 987654321</p></div></section>
+      <section><h2 class="mb-2 font-bold text-slate-700">Terms &amp; Conditions</h2><div class="text-[10px] leading-relaxed text-slate-500"><p>Payment is due within 30 days.</p><p>Late payments may incur additional charges.</p><p>Thank you for your business!</p></div></section>
+    </footer>
+  </main>
 </body>
 </html>`;
   };
@@ -588,346 +277,175 @@ const Invoice = () => {
     setIsModalOpen(false);
   };
 
+  const inputClass = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10";
+  const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500";
+  const totalValue = invoices.reduce((sum, invoice) => sum + (Number(invoice.amount) || 0), 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 relative">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          {/* Back Button */}
-          <button
-            onClick={() => window.history.back()}
-            className="flex items-center text-gray-700 hover:text-gray-900"
-          >
-            <FaArrowLeft className="mr-2 text-lg" />
-
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button onClick={() => window.history.back()} aria-label="Go back" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:-translate-x-0.5 hover:border-indigo-200 hover:text-indigo-600">
+              <FaArrowLeft />
+            </button>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-indigo-600">Workspace / Billing</p>
+              <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Invoices</h1>
+            </div>
+          </div>
+          <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20">
+            <span className="text-xl leading-none">+</span> Create invoice
           </button>
+        </header>
 
-          {/* Title */}
-          <h1 className="text-2xl font-bold text-gray-800">Invoices</h1>
-
-          {/* Placeholder div for spacing to keep title centered */}
-          <div className="w-20"></div>
-        </div>
-
-
-        <div className="bg-white rounded-xl shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Recent Invoices</h2>
-
-          {invoices && invoices.length > 0 ? (
-            <div className="space-y-4">
-              {invoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-                    <div className="mb-3 md:mb-0">
-                      <p className="font-bold text-lg text-blue-600">{invoice.invoiceNumber}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mt-2">
-                        <div>
-                          <span className="font-semibold">Issued</span>
-                          <p>{invoice.issuedDate}</p>
-                        </div>
-                        <div>
-                          <span className="font-semibold">Due Date</span>
-                          <p>{invoice.dueDate}</p>
-                        </div>
-                        <div>
-                          <span className="font-semibold">Customer</span>
-                          <p>{invoice.customerName}</p>
-                        </div>
-                        <div>
-                          <span className="font-semibold">Amount</span>
-                          <p className="text-green-600 font-bold">${invoice.amount?.toFixed(2) || '0.00'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDownload(invoice)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors self-start md:self-auto"
-                    >
-                      Download PDF
-                    </button>
-                  </div>
-                </div>
-              ))}
+        <section className="relative mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-indigo-950 to-indigo-700 p-6 text-white shadow-xl shadow-indigo-950/10 sm:p-8">
+          <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border-[35px] border-white/5" />
+          <div className="pointer-events-none absolute -bottom-28 right-36 h-56 w-56 rounded-full bg-indigo-400/20 blur-3xl" />
+          <div className="relative grid gap-7 md:grid-cols-[1.4fr_1fr] md:items-end">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-indigo-100"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Invoice overview</span>
+              <h2 className="mt-4 max-w-xl text-3xl font-black leading-tight sm:text-4xl">Keep your billing <span className="text-indigo-300">beautifully organized.</span></h2>
+              <p className="mt-3 max-w-lg text-sm leading-6 text-indigo-100/80">Create professional invoices, manage customer details, and print a clean copy whenever you need it.</p>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No invoices found. Create your first invoice to get started!</p>
-            </div>
-          )}
-        </div>
-
-        {/* Create Invoice Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-800">Create New Invoice</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+                <p className="text-xs font-medium text-indigo-100/80">Invoices created</p>
+                <p className="mt-2 text-3xl font-black">{invoices.length}</p>
+                <p className="mt-1 text-xs text-indigo-100/70">In this session</p>
               </div>
-
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4 text-gray-700">Company Information</h3>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                      <input
-                        type="text"
-                        name="companyName"
-                        value={formData.companyName}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter your company name"
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo (Optional)</label>
-
-                      {!formData.companyLogo ? (
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                          <div className="space-y-2">
-                            <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                              <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            <div className="text-sm text-gray-600">
-                              <label className="cursor-pointer">
-                                <span className="font-medium text-blue-600 hover:text-blue-500">Upload a logo</span>
-                                <input
-                                  type="file"
-                                  className="sr-only"
-                                  accept="image/*"
-                                  onChange={handleLogoUpload}
-                                />
-                              </label>
-                              <p className="text-gray-500">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <img
-                                src={formData.companyLogo}
-                                alt="Company Logo"
-                                className="h-12 w-12 object-contain border rounded"
-                              />
-                              <div className="text-sm">
-                                <p className="font-medium text-gray-900">Logo uploaded</p>
-                                <p className="text-gray-500">Ready to use in invoice</p>
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={removeLogo}
-                              className="text-red-500 hover:text-red-700 text-sm font-medium"
-                            >
-                              Remove
-                            </button>
-                          </div>
-
-                          <div className="text-center">
-                            <label className="cursor-pointer">
-                              <span className="text-sm text-blue-600 hover:text-blue-500 font-medium">Change logo</span>
-                              <input
-                                type="file"
-                                className="sr-only"
-                                accept="image/*"
-                                onChange={handleLogoUpload}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <h3 className="text-lg font-medium mb-4 text-gray-700">Customer Information</h3>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                      <input
-                        type="text"
-                        name="customerName"
-                        value={formData.customerName}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
-                      <input
-                        type="text"
-                        name="customerMobile"
-                        value={formData.customerMobile}
-                        onChange={handleInputChange}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                      <textarea
-                        name="customerAddress"
-                        value={formData.customerAddress}
-                        onChange={handleInputChange}
-                        rows="3"
-                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      ></textarea>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4 text-gray-700">Items</h3>
-
-                    {formData.items && formData.items.map((item, index) => (
-                      <div key={index} className="mb-4 p-4 border border-gray-200 rounded-md">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                            <input
-                              type="text"
-                              value={item.productName}
-                              onChange={(e) => handleInputChange(e, index, 'productName')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleInputChange(e, index, 'quantity')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                            <select
-                              value={item.unit}
-                              onChange={(e) => handleInputChange(e, index, 'unit')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                            >
-                              <option value="kg">Kg</option>
-                              <option value="pcs">Pieces</option>
-                              <option value="box">Box</option>
-                              <option value="unit">Unit</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">HSN Code</label>
-                            <input
-                              type="text"
-                              value={item.hsn}
-                              onChange={(e) => handleInputChange(e, index, 'hsn')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.price}
-                              onChange={(e) => handleInputChange(e, index, 'price')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Offer Price</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.offerPrice}
-                              onChange={(e) => handleInputChange(e, index, 'offerPrice')}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mb-3">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                          <textarea
-                            value={item.description}
-                            onChange={(e) => handleInputChange(e, index, 'description')}
-                            rows="2"
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                          ></textarea>
-                        </div>
-
-                        {formData.items.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(index)}
-                            className="text-red-500 text-sm font-medium hover:text-red-700"
-                          >
-                            Remove Item
-                          </button>
-                        )}
-                      </div>
-                    ))}
-
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="flex items-center text-blue-500 font-medium hover:text-blue-700"
-                    >
-                      <span className="text-lg mr-1">+</span> Add More Items
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Create Invoice
-                  </button>
-                </div>
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+                <p className="text-xs font-medium text-indigo-100/80">Total value</p>
+                <p className="mt-2 break-words text-2xl font-black sm:text-3xl">₹{totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="mt-1 text-xs text-indigo-100/70">Across created invoices</p>
               </div>
             </div>
           </div>
-        )}
+        </section>
 
-        {/* Floating Create Button */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-6 right-6 bg-blue-500 text-white p-4 rounded-full shadow-lg flex items-center space-x-2 hover:bg-blue-600 transition-colors z-40"
-        >
-          <span className="text-2xl font-bold">+</span>
-          <span className="font-semibold hidden sm:inline">New Invoice</span>
-        </button>
+        <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight">Recent invoices</h2>
+              <p className="mt-1 text-sm text-slate-500">Your recently created billing documents.</p>
+            </div>
+            <span className="w-fit rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700">{invoices.length} {invoices.length === 1 ? "invoice" : "invoices"}</span>
+          </div>
+
+          {invoices.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {invoices.map((invoice) => (
+                <article key={invoice.id} className="px-5 py-5 transition hover:bg-slate-50/80 sm:px-7">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                        <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.8"><path d="M7 3.75h7l4 4v12.5H7a2 2 0 0 1-2-2v-12.5a2 2 0 0 1 2-2Z"/><path d="M14 3.75v4h4M8.5 12h7M8.5 15.5h7" strokeLinecap="round"/></svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="break-all font-extrabold text-slate-900">{invoice.invoiceNumber}</h3>
+                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-700">Pending</span>
+                        </div>
+                        <p className="mt-1 truncate text-sm text-slate-500">{invoice.customerName}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
+                          <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Issued</p><p className="mt-1 text-xs font-semibold text-slate-700">{invoice.issuedDate}</p></div>
+                          <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Due date</p><p className="mt-1 text-xs font-semibold text-slate-700">{invoice.dueDate}</p></div>
+                          <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Items</p><p className="mt-1 text-xs font-semibold text-slate-700">{invoice.items?.length || 0} {(invoice.items?.length || 0) === 1 ? "item" : "items"}</p></div>
+                          <div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Amount</p><p className="mt-1 text-sm font-black text-emerald-600">₹{Number(invoice.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p></div>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => handleDownload(invoice)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">
+                      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Print / Save PDF
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="px-5 py-16 text-center sm:px-8">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-50 text-indigo-600">
+                <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8" stroke="currentColor" strokeWidth="1.6"><path d="M7 3.75h7l4 4v12.5H7a2 2 0 0 1-2-2v-12.5a2 2 0 0 1 2-2Z"/><path d="M14 3.75v4h4M8.5 12h7M8.5 15.5h4" strokeLinecap="round"/></svg>
+              </div>
+              <h3 className="mt-5 text-lg font-extrabold text-slate-900">Your invoice list is ready for its first entry</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Create your first invoice to see it here. Add your company details, customer information, and the items you’re billing for.</p>
+              <button onClick={() => setIsModalOpen(true)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700"><span className="text-xl leading-none">+</span> Create your first invoice</button>
+            </div>
+          )}
+        </section>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:max-h-[92vh] sm:rounded-3xl">
+            <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-slate-950 to-indigo-900 px-5 py-5 text-white sm:px-8">
+              <div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-300">Billing workspace</p><h2 className="mt-1 text-xl font-black sm:text-2xl">Create new invoice</h2><p className="mt-1 text-xs text-slate-300">Complete the details below to prepare your invoice.</p></div>
+              <button type="button" onClick={() => setIsModalOpen(false)} aria-label="Close modal" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-xl text-white transition hover:bg-white/20">×</button>
+            </div>
+
+            <div className="overflow-y-auto px-4 py-5 sm:px-8 sm:py-7">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+                <div className="space-y-6">
+                  <section className="rounded-2xl border border-slate-200 p-4 sm:p-5">
+                    <div className="mb-4 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-sm font-black text-indigo-700">01</span><div><h3 className="font-extrabold">Company details</h3><p className="text-xs text-slate-500">Who is issuing this invoice?</p></div></div>
+                    <label className={labelClass}>Company name *</label>
+                    <input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} className={inputClass} placeholder="Enter company name" required />
+                    <div className="mt-4"><label className={labelClass}>Company logo <span className="normal-case tracking-normal text-slate-400">(optional)</span></label>
+                      {!formData.companyLogo ? (
+                        <label className="flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center transition hover:border-indigo-300 hover:bg-indigo-50/50">
+                          <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-slate-400" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <span className="mt-2 text-sm font-bold text-indigo-700">Upload company logo</span><span className="mt-1 text-xs text-slate-500">PNG, JPG or GIF · up to 5 MB</span>
+                          <input type="file" className="sr-only" accept="image/*" onChange={handleLogoUpload} />
+                        </label>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"><div className="flex min-w-0 items-center gap-3"><img src={formData.companyLogo} alt="Company logo" className="h-12 w-12 rounded-lg border border-slate-200 bg-white object-contain p-1"/><div className="min-w-0"><p className="text-sm font-bold">Logo uploaded</p><p className="text-xs text-slate-500">Ready to use</p></div></div><div className="flex shrink-0 flex-col gap-2 text-xs font-bold"><label className="cursor-pointer text-indigo-700 hover:text-indigo-900">Change<input type="file" className="sr-only" accept="image/*" onChange={handleLogoUpload}/></label><button type="button" onClick={removeLogo} className="text-rose-600 hover:text-rose-700">Remove</button></div></div>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-slate-200 p-4 sm:p-5">
+                    <div className="mb-4 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">02</span><div><h3 className="font-extrabold">Customer details</h3><p className="text-xs text-slate-500">Who will receive the invoice?</p></div></div>
+                    <div className="space-y-4">
+                      <div><label className={labelClass}>Customer name *</label><input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} className={inputClass} placeholder="Full name or business" required /></div>
+                      <div><label className={labelClass}>Mobile number *</label><input type="tel" name="customerMobile" value={formData.customerMobile} onChange={handleInputChange} className={inputClass} placeholder="Customer phone number" required /></div>
+                      <div><label className={labelClass}>Address *</label><textarea name="customerAddress" value={formData.customerAddress} onChange={handleInputChange} rows="3" className={`${inputClass} resize-y`} placeholder="Billing address" required /></div>
+                    </div>
+                  </section>
+                </div>
+
+                <section className="rounded-2xl border border-slate-200 p-4 sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-sm font-black text-emerald-700">03</span><div><h3 className="font-extrabold">Invoice items</h3><p className="text-xs text-slate-500">Products and services being billed.</p></div></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{formData.items.length} {formData.items.length === 1 ? "item" : "items"}</span></div>
+                  <div className="space-y-4">
+                    {formData.items.map((item, index) => (
+                      <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 sm:p-4">
+                        <div className="mb-3 flex items-center justify-between"><p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Item {String(index + 1).padStart(2, "0")}</p>{formData.items.length > 1 && <button type="button" onClick={() => removeItem(index)} className="rounded-lg px-2 py-1 text-xs font-bold text-rose-600 transition hover:bg-rose-50">Remove</button>}</div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="sm:col-span-2"><label className={labelClass}>Product / service *</label><input type="text" value={item.productName} onChange={(e) => handleInputChange(e, index, "productName")} className={inputClass} placeholder="Item name" required /></div>
+                          <div><label className={labelClass}>Quantity *</label><input type="number" min="1" value={item.quantity} onChange={(e) => handleInputChange(e, index, "quantity")} className={inputClass} placeholder="1" required /></div>
+                          <div><label className={labelClass}>Unit</label><select value={item.unit} onChange={(e) => handleInputChange(e, index, "unit")} className={inputClass}><option value="kg">Kg</option><option value="pcs">Pieces</option><option value="box">Box</option><option value="unit">Unit</option></select></div>
+                          <div><label className={labelClass}>Price *</label><input type="number" min="0" step="0.01" value={item.price} onChange={(e) => handleInputChange(e, index, "price")} className={inputClass} placeholder="0.00" required /></div>
+                          <div><label className={labelClass}>Offer price *</label><input type="number" min="0" step="0.01" value={item.offerPrice} onChange={(e) => handleInputChange(e, index, "offerPrice")} className={inputClass} placeholder="0.00" required /></div>
+                          <div><label className={labelClass}>HSN code</label><input type="text" value={item.hsn} onChange={(e) => handleInputChange(e, index, "hsn")} className={inputClass} placeholder="Optional" /></div>
+                          <div><label className={labelClass}>Description</label><input type="text" value={item.description} onChange={(e) => handleInputChange(e, index, "description")} className={inputClass} placeholder="Optional details" /></div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-xs"><span className="font-semibold text-slate-500">Line total</span><span className="font-black text-slate-900">₹{((Number(item.offerPrice) || 0) * (Number(item.quantity) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={addItem} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-indigo-300 bg-indigo-50/50 px-4 py-3 text-sm font-bold text-indigo-700 transition hover:border-indigo-500 hover:bg-indigo-50"><span className="text-xl leading-none">+</span> Add another item</button>
+                  <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white"><div className="flex items-center justify-between text-sm text-slate-300"><span>Estimated total</span><span>{formData.items.length} line {formData.items.length === 1 ? "item" : "items"}</span></div><p className="mt-2 text-3xl font-black">₹{formData.items.reduce((sum, item) => sum + ((Number(item.offerPrice) || 0) * (Number(item.quantity) || 0)), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p className="mt-1 text-xs text-slate-400">Calculated using offer price × quantity.</p></div>
+                </section>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-8">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={handleSubmit} className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20">Create invoice</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
